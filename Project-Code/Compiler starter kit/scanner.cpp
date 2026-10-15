@@ -511,6 +511,16 @@ void scanner::scan_digit()
 	// scan in a token beginning with a digit
 	// Note that a unary operator such as -1 would be detected as a minus sign followed by a digit.
 
+	int value = 0;
+	while(isdigit(next_char))
+	{
+		value = value*10 + (next_char - '0');
+		get_char();
+	}
+
+	current_integer_value = value;
+	current_symbol = new symbol(symbol::integer);
+	
     	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
     	// PARSER CAN BE STARTED.
 
