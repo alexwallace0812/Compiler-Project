@@ -518,9 +518,29 @@ void scanner::scan_digit()
 		get_char();
 	}
 
+	if(next_char == '.' and following_char() != '.')
+	{
+		get_char();
+		float result_val = (float)value;
+		float scale = 1.0f;
+		int frac_digits = 0;
+		while(isdigit(next_char))
+		{
+			result_val = result_val*10 + (next_char - '0');
+			scale *= 10;
+			frac_digits++;
+			get_char();
+		}
+	}
 	current_integer_value = value;
 	current_symbol = new symbol(symbol::integer);
-	
+
+
+
+	// Real nums
+	// If 
+	// Range Nums
+
     	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
     	// PARSER CAN BE STARTED.
 
