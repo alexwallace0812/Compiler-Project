@@ -523,7 +523,7 @@ void scanner::scan_digit()
 		get_char();
 		float result_val = (float)value;
 		float scale = 1.0f;
-		int frac_digits = 0;
+		int frac_digits = 0; // Error handling
 		while(isdigit(next_char))
 		{
 			result_val = result_val*10 + (next_char - '0');
@@ -531,9 +531,20 @@ void scanner::scan_digit()
 			frac_digits++;
 			get_char();
 		}
+		if(frac_digits == 0)
+		{
+			error->flag(current_line_number, current_pos_on_line, 63); // Error if real_num is not complete after .
+		}
+		current_real_value = result_val/scale;
+		current_symbol = new symbol(symbol::real_num);
 	}
-	current_integer_value = value;
-	current_symbol = new symbol(symbol::integer);
+	else
+	{
+		current_integer_value = value;
+		current_symbol = new symbol(symbol::integer);
+	}
+
+
 
 
 
