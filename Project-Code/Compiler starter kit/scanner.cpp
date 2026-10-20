@@ -396,7 +396,8 @@ void scanner::scan_string()
     	// double quote and that the string is wholly contained on a single line in
     	// the source file. 2 adjacent double quote marks are interpreted as a single
     	// double quote character within the string.
-    
+
+
     	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
     	// PARSER CAN BE STARTED.
 
@@ -511,6 +512,7 @@ void scanner::scan_digit()
 	// scan in a token beginning with a digit
 	// Note that a unary operator such as -1 would be detected as a minus sign followed by a digit.
 
+	bool isReal = false;
 	int value = 0;
 	while(isdigit(next_char))
 	{
@@ -520,6 +522,7 @@ void scanner::scan_digit()
 
 	if(next_char == '.' and following_char() != '.')
 	{
+		isReal = true;
 		get_char();
 		float result_val = (float)value;
 		float scale = 1.0f;
@@ -544,8 +547,58 @@ void scanner::scan_digit()
 		current_symbol = new symbol(symbol::integer);
 	}
 
+	// EXPONENTIAL NUMBER HANDLING
 
+	if(next_char == 'E' or next_char == 'e')
+	{
+		get_char();
+		bool negative = false;
+		if(next_char == '+')
+		{
+			get_char();
+		}
+		else if(next_char == '-')
+		{
+			negative = true;
+			get_char();
+		}
+		if(!isdigit(next_char))
+		{
+			error->flag(current_line_number, current_pos_on_line, 64);
+		}
+		int exponent = 0;
+		int exponent_digits = 0;
+		while(isdigit(next_char))
+		{
+			exponent = exponent*10 + (next_char - '0');
+			exponent_digits++;
+			get_char();
+		}
+		if(exponent_digits > 2)
+		{
+			error->flag(current_line_number, current_pos_on_line, 65); // Exponential # is too large
+		}
+		if(isReal)
+		{
+			current_real_value = current_real_value * pow(10, negative ? -exponent : exponent);
+		}
+		else
+		{
+			if(negative)
+			{
+				error->flag(current_line_number, current_pos_on_line, 67);
+			}
+			else
+			{
+				current_integer_value = current_integer_value * (int)pow(10, exponent);
+			}
+		}
+	}
 
+	if(next_char == '.' and following_char() == '.')
+	{
+		
+	}
 
 
 	// Real nums
