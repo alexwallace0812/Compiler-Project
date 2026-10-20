@@ -398,23 +398,37 @@ void scanner::scan_string()
     	// double quote character within the string.
 
 		string scannedString = "";
-		get_char();
-		while(next_char != '"')
+		get_char(); // Consume opening quote
+		while(!eoln_flag)
 		{
-			scannedString += next_char;
-			get_char();
+			if(next_char == '"')
+			{
+				if(following_char() == '"') // Handling double quotations
+				{
+					scannedString += next_char;
+					get_char();
+					get_char();
+				}
+				else
+				{
+					break;
+				}
+			}
+			else
+			{
+				scannedString += next_char;
+				get_char();
+			}
 		}
 
-		if(next_char == '"')
+		if(eoln_flag)
 		{
-			current_string_value = scannedString;
-			get_char();
+			error->flag(current_line_number, current_pos_on_line, 60); // Hanging string, no ending quote
 		}
 
-    	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
-    	// PARSER CAN BE STARTED.
+		current_string_value = scannedString;
+		current_symbol = new symbol(symbol::strng);
 
-	// INSERT CODE HERE.
 }
 
 
@@ -527,18 +541,23 @@ void scanner::scan_digit()
 
 	bool isReal = false;
 	int value = 0;
+
+	// Begins with scanning digits
 	while(isdigit(next_char))
 	{
 		value = value*10 + (next_char - '0');
 		get_char();
 	}
 
+
+	// REAL NUMBER HANDLING
+
 	if(next_char == '.' and following_char() != '.')
 	{
-		isReal = true;
-		get_char();
+		isReal = true; // Set a flag to confirm the number is real. 
+		get_char(); 
 		float result_val = (float)value;
-		float scale = 1.0f;
+		float scale = 1.0f; // Calculating the final value
 		int frac_digits = 0; // Error handling
 		while(isdigit(next_char))
 		{
@@ -607,22 +626,6 @@ void scanner::scan_digit()
 			}
 		}
 	}
-
-	if(next_char == '.' and following_char() == '.')
-	{
-		
-	}
-
-
-	// Real nums
-	// If 
-	// Range Nums
-
-    	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
-    	// PARSER CAN BE STARTED.
-
-	// INSERT CODE HERE.
-
 }
 
 
