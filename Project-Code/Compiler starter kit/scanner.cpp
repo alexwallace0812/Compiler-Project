@@ -397,6 +397,19 @@ void scanner::scan_string()
     	// the source file. 2 adjacent double quote marks are interpreted as a single
     	// double quote character within the string.
 
+		string scannedString = "";
+		get_char();
+		while(next_char != '"')
+		{
+			scannedString += next_char;
+			get_char();
+		}
+
+		if(next_char == '"')
+		{
+			current_string_value = scannedString;
+			get_char();
+		}
 
     	// TO BE COMPLETED BEFORE THE SCANNER FUNCTIONS PROPERLY AND THE
     	// PARSER CAN BE STARTED.
