@@ -540,33 +540,33 @@ void scanner::scan_digit()
 	// scan in a token beginning with a digit
 	// Note that a unary operator such as -1 would be detected as a minus sign followed by a digit.
 
-	bool isReal = false;
+	bool isReal = false; // Flags for real and exponent
 	bool overflowError = false;
-	int value = 0;
+	int value = 0; // Specific buffers
 	int digit = 0;
 
 	// Begins with scanning digits
 	while(isdigit(next_char))
 	{
-		digit = next_char -'0';
-		if(value > (INT_MAX - digit)/10)
+		digit = next_char -'0'; // Setting current digit from char to int (atoi)
+		if(value > (INT_MAX - digit)/10) // Check for overflow
 		{
-			if(!overflowError)
+			if(!overflowError) // Sets overflow flag to true for error
 			{
-				error->flag(current_line_number, current_pos_on_line, 68);
+				error->flag(current_line_number, current_pos_on_line, 68); 
 				overflowError = true;
 			}
 		}
 		else
 		{
 			value = value*10 + digit;
-		}
+		} // Increasing the most significant digit then adding new digit
 		get_char();
 	}
 
 	if(overflowError)
 	{
-		error->flag(current_line_number, current_pos_on_line, 68);
+		error->flag(current_line_number, current_pos_on_line, 68); // Throw error
 	}
 
 	// REAL NUMBER HANDLING
@@ -575,26 +575,26 @@ void scanner::scan_digit()
 	{
 		isReal = true; // Set a flag to confirm the number is real. 
 		get_char(); 
-		float result_val = (float)value;
+		float result_val = (float)value; // Resulting real number buffer
 		float scale = 1.0f; // Calculating the final value
 		int frac_digits = 0; // Error handling
 		while(isdigit(next_char))
 		{
-			result_val = result_val*10 + (next_char - '0');
-			scale *= 10;
-			frac_digits++;
+			result_val = result_val*10 + (next_char - '0'); // Update buffer
+			scale *= 10; // Increase divisor scale
+			frac_digits++; // Error checking
 			get_char();
 		}
 		if(frac_digits == 0)
 		{
 			error->flag(current_line_number, current_pos_on_line, 63); // Error if real_num is not complete after .
 		}
-		current_real_value = result_val/scale;
+		current_real_value = result_val/scale; // Finalizes real number value
 		current_symbol = new symbol(symbol::real_num);
 	}
 	else
 	{
-		current_integer_value = value;
+		current_integer_value = value; // If it's an int
 		current_symbol = new symbol(symbol::integer);
 	}
 
@@ -603,28 +603,28 @@ void scanner::scan_digit()
 	if(next_char == 'E' or next_char == 'e')
 	{
 		get_char();
-		bool negative = false;
+		bool negative = false; // Flag for negative exponent
 		if(next_char == '+')
 		{
-			get_char();
+			get_char(); // Consume char, nothing happens
 		}
 		else if(next_char == '-')
 		{
-			negative = true;
+			negative = true; // Flag is true
 			get_char();
 		}
 		if(!isdigit(next_char))
 		{
 			error->flag(current_line_number, current_pos_on_line, 64);
 		}
-		int exponent = 0;
+		int exponent = 0; // For calculating number using pow()
 		int exponent_digits = 0;
 		while(isdigit(next_char))
 		{
-			exponent_digits++;
+			exponent_digits++; // Bounds checking
 			if(exponent_digits <= 2)
 			{
-				exponent = exponent*10 + (next_char - '0');
+				exponent = exponent*10 + (next_char - '0'); // Again setting exponent buffer
 			}
 			get_char();
 		}
@@ -632,33 +632,33 @@ void scanner::scan_digit()
 		{
 			error->flag(current_line_number, current_pos_on_line, 65); // Exponential # is too large
 		}
-		if(isReal)
+		if(isReal) // For real numbers, using conditionals and int can't be negative
 		{
 			current_real_value = current_real_value * pow(10, negative ? -exponent : exponent);
 		}
 		else
 		{
-			if(negative)
+			if(negative) // Throwing error for integers
 			{
 				error->flag(current_line_number, current_pos_on_line, 67);
 			}
 			else
 			{
-				double scale = current_integer_value * pow(10, exponent);
+				double scale = current_integer_value * pow(10, exponent); // Temp value buffer
 				if(scale > INT_MAX)
 				{
-					error->flag(current_line_number, current_pos_on_line, 68);
+					error->flag(current_line_number, current_pos_on_line, 68); // Final bounds check
 				}
 				else
 				{
-					current_integer_value = (int)scale;
+					current_integer_value = (int)scale; // If no errors, set value
 				}
 			}
 		}
 		if(isReal and (isinf(current_real_value) or isnan(current_real_value)))
 		{
 			error->flag(current_line_number, current_pos_on_line, 66);
-		}
+		} // Real number error checking, is the value INF or nan?
 	}
 }
 
