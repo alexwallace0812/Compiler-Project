@@ -1,0 +1,3 @@
+"hello";
+x := "I said ""Help""";
+y := 5;
