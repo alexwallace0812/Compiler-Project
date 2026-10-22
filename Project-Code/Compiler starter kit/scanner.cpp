@@ -13,6 +13,7 @@
 #include <string>
 #include <cctype>
 #include <cmath>
+#include <climits>
 
 #include "symbol.h"
 #include "error_handler.h"
@@ -397,7 +398,7 @@ void scanner::scan_string()
     	// the source file. 2 adjacent double quote marks are interpreted as a single
     	// double quote character within the string.
 
-		string scannedString = "";
+		string scannedString = ""; // Empty string to start
 		get_char(); // Consume opening quote
 		while(!eoln_flag)
 		{
@@ -407,16 +408,16 @@ void scanner::scan_string()
 				{
 					scannedString += next_char;
 					get_char();
-					get_char();
+					get_char(); // Consume both quotes
 				}
 				else
 				{
-					break;
+					break; // Ending quote, breaks out of the loop
 				}
 			}
 			else
 			{
-				scannedString += next_char;
+				scannedString += next_char; // Append char to string
 				get_char();
 			}
 		}
@@ -426,8 +427,8 @@ void scanner::scan_string()
 			error->flag(current_line_number, current_pos_on_line, 60); // Hanging string, no ending quote
 		}
 
-		current_string_value = scannedString;
-		current_symbol = new symbol(symbol::strng);
+		current_string_value = scannedString; // Set string to current value
+		current_symbol = new symbol(symbol::strng); // Set current symbol
 
 }
 
@@ -540,15 +541,33 @@ void scanner::scan_digit()
 	// Note that a unary operator such as -1 would be detected as a minus sign followed by a digit.
 
 	bool isReal = false;
+	bool overflowError = false;
 	int value = 0;
+	int digit = 0;
 
 	// Begins with scanning digits
 	while(isdigit(next_char))
 	{
-		value = value*10 + (next_char - '0');
+		digit = next_char -'0';
+		if(value > (INT_MAX - digit)/10)
+		{
+			if(!overflowError)
+			{
+				error->flag(current_line_number, current_pos_on_line, 68);
+				overflowError = true;
+			}
+		}
+		else
+		{
+			value = value*10 + digit;
+		}
 		get_char();
 	}
 
+	if(overflowError)
+	{
+		error->flag(current_line_number, current_pos_on_line, 68);
+	}
 
 	// REAL NUMBER HANDLING
 
@@ -602,8 +621,11 @@ void scanner::scan_digit()
 		int exponent_digits = 0;
 		while(isdigit(next_char))
 		{
-			exponent = exponent*10 + (next_char - '0');
 			exponent_digits++;
+			if(exponent_digits <= 2)
+			{
+				exponent = exponent*10 + (next_char - '0');
+			}
 			get_char();
 		}
 		if(exponent_digits > 2)
@@ -622,8 +644,20 @@ void scanner::scan_digit()
 			}
 			else
 			{
-				current_integer_value = current_integer_value * (int)pow(10, exponent);
+				double scale = current_integer_value * pow(10, exponent);
+				if(scale > INT_MAX)
+				{
+					error->flag(current_line_number, current_pos_on_line, 68);
+				}
+				else
+				{
+					current_integer_value = (int)scale;
+				}
 			}
+		}
+		if(isReal and (isinf(current_real_value) or isnan(current_real_value)))
+		{
+			error->flag(current_line_number, current_pos_on_line, 66);
 		}
 	}
 }
