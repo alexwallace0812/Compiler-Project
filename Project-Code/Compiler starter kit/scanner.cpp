@@ -553,7 +553,6 @@ void scanner::scan_digit()
 		{
 			if(!overflowError) // Sets overflow flag to true for error
 			{
-				error->flag(current_line_number, current_pos_on_line, 68); 
 				overflowError = true;
 			}
 		}
