@@ -1,3 +1,12 @@
+/*
+ * parser.h
+ *
+ * Written:            4 November 2026
+ * Last modified:      4 November 2026
+ *      Author: Alex Wallace
+ */
+
+
 
 #ifndef PARSER_H
 #define PARSER_H

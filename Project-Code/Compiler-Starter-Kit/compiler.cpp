@@ -40,11 +40,11 @@
 
 #include "lille_exception.h"
 #include "scanner.h"
-//#include "parser.h"
+#include "parser.h"
 #include "symbol.h"
 #include "error_handler.h"
 //#include "code_gen.h"
-//#include "id_table.h"
+#include "id_table.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -61,7 +61,7 @@ string listing_filename;						// name of the listing file to be generated if nee
 
 error_handler* err;								// error handler object
 scanner* scan;									// scanner object
-//parser* parse;									// parser object
+parser* parse;									// parser object
 id_table* id_tab = NULL;								// symbol table object
 //code_gen* code;									// code generator
 
@@ -202,6 +202,8 @@ bool process_command_line(int argc, char *argv[]) {
 
 			// THE FOLLOWIG CODE IS FOR TESTING PURPOSES ONLY.
                         scan = new scanner(source_filename, id_tab, err);
+						parse = new parser(scan, id_tab, err); // 11/4 Added parser object to the compiler
+						parse->parse_program();
 
                         token* tok;
                         do
