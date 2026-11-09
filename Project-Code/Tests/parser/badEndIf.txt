@@ -1,0 +1,4 @@
+program p is
+begin
+    if true then null; end loop;
+end;

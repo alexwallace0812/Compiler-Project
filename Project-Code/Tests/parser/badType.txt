@@ -1,0 +1,5 @@
+program p is
+    x : ;
+begin
+    null;
+end;

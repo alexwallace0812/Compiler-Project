@@ -1,0 +1,7 @@
+program prag is
+    x : integer;
+    pragma trace(x);
+begin
+    pragma debug(on);
+    x := 1;
+end;

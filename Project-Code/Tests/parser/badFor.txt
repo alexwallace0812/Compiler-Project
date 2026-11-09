@@ -1,0 +1,4 @@
+program p is
+begin
+    for i in 1..10 null; end loop;
+end;

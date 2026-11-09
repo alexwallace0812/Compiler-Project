@@ -1,0 +1,5 @@
+program p is
+    c : constant integer := z;
+begin
+    null;
+end;

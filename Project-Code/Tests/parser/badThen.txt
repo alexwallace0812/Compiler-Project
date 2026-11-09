@@ -1,0 +1,5 @@
+program p is
+    a : integer;
+begin
+    if a null; end if;
+end;

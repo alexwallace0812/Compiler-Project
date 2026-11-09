@@ -30,6 +30,8 @@ class parser {
     id_table* id_tab;
     error_handler* error;
 
+    // Main parser grammar function declarations
+
     void parse_block();
     void parse_statement_list();
     void parse_statement();
@@ -57,16 +59,15 @@ class parser {
     void parse_while();
     void parse_for();
 
+    // Helper functions
+
     bool relation_op_follows();
     bool expression_can_start();
     bool statement_can_start();
 
     public:
-    parser(scanner* s, id_table* id_t, error_handler* e);
-    void parse_program();
-
-
-
+    parser(scanner* s, id_table* id_t, error_handler* e); // Constructor
+    void parse_program(); // Calls parser
 };
 
 

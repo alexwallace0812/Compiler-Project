@@ -1,0 +1,73 @@
+program deep_nest is
+    total, count : integer;
+    ratio        : real;
+    label        : string;
+    limit        : constant integer := 100;
+    greeting     : constant string := "Hello, ""lille""!";
+    debug_on     : constant boolean := false;
+
+    function double_it(n : value integer) return integer is
+    begin
+        return n + n;
+    end double_it;
+
+    procedure outer(seed : value integer; result : ref integer) is
+        temp : integer;
+
+        function square(n : value integer) return integer is
+        begin
+            return n * n;
+        end square;
+
+        procedure bump(x : ref integer) is
+        begin
+            x := x + 1;
+            return;
+        end bump;
+
+    begin
+        temp := square(seed);
+        for i in reverse 1..10 loop
+            if i in 1..3 then
+                bump(temp);
+            elsif odd i then
+                temp := temp - square(i);
+            else
+                null;
+            end if;
+        end loop;
+        result := temp;
+    end outer;
+
+    function scale(v : value real; k : value integer) return real is
+    begin
+        return v * k ** 2;
+    end scale;
+
+begin
+    read(total);
+    read count;
+    outer(total, count);
+
+    while count < limit loop
+        loop
+            count := count + double_it(2);
+            exit when count > 50;
+        end loop;
+        count := count * 2;
+    end loop;
+
+    if scale(2.5, count) > 3.0 then
+        write "big";
+    elsif not count = 0 then
+        writeln("count is ", count);
+    else
+        writeln;
+    end if;
+
+    label := greeting & " total: " & int2string(total);
+    ratio := scale(-1.5, 3);
+    write label & " / " & real2string(ratio);
+    writeln(double_it(double_it(1)), 2 ** (3 ** 2));
+    write -total;
+end deep_nest;
