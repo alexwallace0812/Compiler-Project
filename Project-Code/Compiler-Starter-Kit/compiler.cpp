@@ -206,11 +206,6 @@ bool process_command_line(int argc, char *argv[]) {
 						parse->parse_program();
 
                         token* tok;
-                        do
-                        {
-                                tok = scan->get_token();
-                        } while (tok->get_sym() != symbol::end_of_program);
-                        //END OF CODE FOR TESTING PURPOSES
 
 
 			// Create a symbol_table object
