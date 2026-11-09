@@ -65,7 +65,7 @@ void parser::parse_statement_list()
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
-    while(scan->have(symbol::null_sym))
+    while(scan->have(symbol::null_sym) or scan->have(symbol::write_sym) or scan->have(symbol::writeln_sym))
     {
         parse_statement();
         scan->must_be(symbol::semicolon_sym);
@@ -73,7 +73,19 @@ void parser::parse_statement_list()
 }
 void parser::parse_statement()
 {
-    scan->must_be(symbol::null_sym);
+
+    if (scan->have(symbol::write_sym))
+    {
+        parse_write();
+    }
+    else if (scan->have(symbol::writeln_sym))
+    {
+        parse_write_line();
+    }
+    else
+    {
+        scan->must_be(symbol::null_sym);
+    }
 }
 
 
@@ -207,7 +219,7 @@ void parser::parse_param()
 void parser::parse_expression()
 {
     parse_simp_expression();
-    if(relop_follows())
+    if(relation_op_follows())
     {
         scan->get_token();
         parse_simp_expression();
@@ -234,7 +246,7 @@ void parser::parse_expr_2()
 {
     parse_term();
     
-    if(scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym) or scan->have(symbol::or_sym))
+    while(scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym) or scan->have(symbol::or_sym))
     {
         scan->get_token();
         parse_term();
@@ -250,20 +262,140 @@ void parser::parse_range()
 
 void parser::parse_term()
 {
-
+    parse_factor();
+    while (scan->have(symbol::asterisk_sym) 
+    or scan->have(symbol::slash_sym) 
+    or scan->have(symbol::and_sym))
+    {
+        scan->get_token();
+        parse_factor();
+    }
 }
 
 void parser::parse_factor()
 {
-
+    if (scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym))
+    {
+        scan->get_token();                  // optional leading sign
+        parse_primary();
+    }
+    else
+    {
+        parse_primary();
+        if (scan->have(symbol::power_sym))
+        {
+            scan->must_be(symbol::power_sym);
+            parse_primary();
+        }
+    }
 }
 
 void parser::parse_primary()
 {
-
+    if (scan->have(symbol::not_sym))
+    { 
+        scan->must_be(symbol::not_sym);  
+        parse_expression();
+    }
+    else if (scan->have(symbol::odd_sym)) 
+    { 
+        scan->must_be(symbol::odd_sym); 
+        parse_expression(); 
+    }
+    else if (scan->have(symbol::left_paren_sym))
+    {
+        scan->must_be(symbol::left_paren_sym);
+        parse_simp_expression();
+        scan->must_be(symbol::right_paren_sym);
+    }
+    else if (scan->have(symbol::identifier))
+    {
+        scan->must_be(symbol::identifier);
+        if (scan->have(symbol::left_paren_sym))
+        {
+            scan->must_be(symbol::left_paren_sym);
+            parse_expression();
+            while (scan->have(symbol::comma_sym)) 
+            { 
+                scan->must_be(symbol::comma_sym); 
+                parse_expression(); 
+            }
+            scan->must_be(symbol::right_paren_sym);
+        }
+    }
+    else if (scan->have(symbol::integer) or scan->have(symbol::real_num))  
+    {
+        scan->get_token();
+    }
+    else if (scan->have(symbol::strng))
+    {
+        scan->get_token();
+    }
+    else if (scan->have(symbol::true_sym) or scan->have(symbol::false_sym)) 
+    {
+        scan->get_token();
+    }
+    else 
+    {
+        scan->must_be(symbol::identifier);
+    } 
 }
 
-bool parser::relop_follows()
+bool parser::relation_op_follows()
 {
+    symbol::symbol_type s = scan->this_token()->get_sym();
+        return s == symbol::greater_than_sym or s == symbol::less_than_sym or s == symbol::equals_sym or s == symbol::not_equals_sym or s == symbol::less_or_equal_sym or s == symbol::greater_or_equal_sym;
+}
 
+bool parser::expression_can_start()
+{
+    symbol::symbol_type s = scan->this_token()->get_sym();
+    return s == symbol::identifier or s == symbol::integer or s == symbol::real_num or s == symbol::strng or s == symbol::true_sym or s == symbol::false_sym or s == symbol::not_sym or s == symbol::odd_sym or s == symbol::left_paren_sym or s == symbol::plus_sym or s == symbol::minus_sym;
+}
+
+void parser::parse_write()
+{
+    scan->must_be(symbol::write_sym);
+
+    bool parentheses = scan->have(symbol::left_paren_sym);
+    if (parentheses) 
+    {
+        scan->must_be(symbol::left_paren_sym);
+    }
+
+    parse_expression();
+    while (scan->have(symbol::comma_sym)) 
+    { 
+        scan->must_be(symbol::comma_sym); parse_expression(); 
+    }
+
+    if (parentheses) 
+    {
+        scan->must_be(symbol::right_paren_sym);
+    }
+}
+
+void parser::parse_write_line()
+{
+    scan->must_be(symbol::writeln_sym);
+
+    bool parentheses = scan->have(symbol::left_paren_sym);
+    if (parentheses) 
+    {
+        scan->must_be(symbol::left_paren_sym);
+    }
+
+    if(expression_can_start())
+    {
+        parse_expression();
+        while (scan->have(symbol::comma_sym)) 
+        { 
+            scan->must_be(symbol::comma_sym); parse_expression(); 
+        }
+    }
+
+    if (parentheses) 
+    {
+        scan->must_be(symbol::right_paren_sym);
+    }
 }

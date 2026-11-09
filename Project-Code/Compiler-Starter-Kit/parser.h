@@ -46,9 +46,11 @@ class parser {
     void parse_term();
     void parse_factor();
     void parse_primary();
+    void parse_write();
+    void parse_write_line();
 
-    bool relop_follows();
-
+    bool relation_op_follows();
+    bool expression_can_start();
 
     public:
     parser(scanner* s, id_table* id_t, error_handler* e);

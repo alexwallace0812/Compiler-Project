@@ -1,0 +1,14 @@
+program decls is
+    a, b : integer;
+    r    : real;
+    s    : string;
+    flag : boolean;
+    n    : constant integer := 42;
+    t    : constant boolean := true;
+    msg  : constant string := "hi";
+    procedure p is begin null; end;
+    procedure q(x : value integer; y : ref real) is begin null; end;
+    function f(a : value integer) return integer is begin null; end;
+begin
+    null;
+end;

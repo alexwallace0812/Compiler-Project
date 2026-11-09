@@ -1,0 +1,4 @@
+program minimal is
+begin
+    null;
+end;
