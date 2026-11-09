@@ -105,7 +105,7 @@ void parser::parse_statement() // Dispatcher, calls specific parsing grammar che
 
 void parser::parse_program() // Grammar check for opening program syntax
 {
-    scan->must_be(symbol::program_sym);
+    scan->must_be(symbol::program_sym); // <prog> ::= program <ident> is <block> 
     scan->must_be(symbol::identifier);
     scan->must_be(symbol::is_sym);
     parse_block();
@@ -115,13 +115,15 @@ void parser::parse_program() // Grammar check for opening program syntax
         error->flag(scan->this_token(), 77);
     }
 }
+
 void parser::parse_block() // Block syntax check
 {
+    // <block> ::= { <declaration> }* begin <statement_list> end [ <ident> ]
+    
     while(scan->have(symbol::identifier) or scan->have(symbol::procedure_sym) or scan->have(symbol::function_sym))
     {
         parse_declaration();
     }
-
     scan->must_be(symbol::begin_sym);
     parse_statement_list();
     scan->must_be(symbol::end_sym);
@@ -134,6 +136,8 @@ void parser::parse_block() // Block syntax check
 
 void parser::parse_statement_list() // Grammar check statement list
 {
+    // <statement_list> ::= <statement> ; { <statement> ; }*
+    
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
