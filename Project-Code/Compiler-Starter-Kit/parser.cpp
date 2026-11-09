@@ -63,39 +63,39 @@ void parser::parse_statement() // Dispatcher, calls specific parsing grammar che
     }
     else if (scan->have(symbol::writeln_sym))
     {
-        parse_write_line(); // Parses write function
+        parse_write_line(); // Parses write_line function
     }
     else if (scan->have(symbol::identifier))
     {
-        parse_simp_statement(); // Parses write function
+        parse_simp_statement(); // Parses simple statement function
     }
     else if (scan->have(symbol::exit_sym))
     {
-        parse_exit(); // Parses write function
+        parse_exit(); // Parses exit
     }
     else if (scan->have(symbol::return_sym))
     {
-        parse_return(); // Parses write function
+        parse_return(); // Parses return
     }
     else if (scan->have(symbol::read_sym))
     {
-        parse_read(); // Parses write function
+        parse_read(); // Parses read function
     }
     else if (scan->have(symbol::if_sym))
     {
-        parse_if(); // Parses write function
+        parse_if(); // Parses if
     }
     else if (scan->have(symbol::loop_sym))
     {
-        parse_loop(); // Parses write function
+        parse_loop(); // Parses loop
     }
     else if (scan->have(symbol::while_sym))
     {
-        parse_while(); // Parses while statements 
+        parse_while(); // Parses while
     }
     else if (scan->have(symbol::for_sym))
     {
-        parse_for(); // Parses for symbol
+        parse_for(); // Parses for loop
     }
     else
     {
@@ -137,7 +137,7 @@ void parser::parse_block() // Block syntax check
 void parser::parse_statement_list() // Grammar check statement list
 {
     // <statement_list> ::= <statement> ; { <statement> ; }*
-    
+
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
@@ -517,7 +517,8 @@ void parser::parse_read() // Read
     }
 }
 
-void parser::parse_if() // if grammar
+void parser::parse_if() // if grammar, in depth the while loop shows elsif repetition
+// Falls back on else
 {
     scan->must_be(symbol::if_sym);
     parse_expression();
