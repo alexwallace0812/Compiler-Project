@@ -52,6 +52,10 @@ class parser {
     void parse_exit();
     void parse_return();
     void parse_read();
+    void parse_if();
+    void parse_loop();
+    void parse_while();
+    void parse_for();
 
     bool relation_op_follows();
     bool expression_can_start();

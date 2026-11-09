@@ -98,6 +98,22 @@ void parser::parse_statement()
     {
         parse_read();
     }
+    else if (scan->have(symbol::if_sym))
+    {
+        parse_if();
+    }
+    else if (scan->have(symbol::loop_sym))
+    {
+        parse_loop();
+    }
+    else if (scan->have(symbol::while_sym))
+    {
+        parse_while();
+    }
+    else if (scan->have(symbol::for_sym))
+    {
+        parse_for();
+    }
     else
     {
         scan->must_be(symbol::null_sym);
@@ -482,5 +498,60 @@ void parser::parse_read()
 bool parser::statement_can_start()
 {
     symbol::symbol_type s = scan->this_token()->get_sym();
-    return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym;
+    return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym or s == symbol::read_sym or s == symbol::if_sym or s == symbol::loop_sym or s == symbol::while_sym or s == symbol::for_sym;
+}
+
+void parser::parse_if()
+{
+    scan->must_be(symbol::if_sym);
+    parse_expression();
+    scan->must_be(symbol::then_sym);
+    parse_statement_list();
+
+    while (scan->have(symbol::elsif_sym))
+    {
+        scan->must_be(symbol::elsif_sym);
+        parse_expression();
+        scan->must_be(symbol::then_sym);
+        parse_statement_list();
+    }
+
+    if (scan->have(symbol::else_sym))
+    {
+        scan->must_be(symbol::else_sym);
+        parse_statement_list();
+    }
+
+    scan->must_be(symbol::end_sym);
+    scan->must_be(symbol::if_sym);
+}
+
+void parser::parse_loop()
+{
+    scan->must_be(symbol::loop_sym);
+    parse_statement_list();
+    scan->must_be(symbol::end_sym);
+    scan->must_be(symbol::loop_sym);                   // "end loop"
+}
+
+void parser::parse_while()
+{
+    scan->must_be(symbol::while_sym);
+    parse_expression();
+    parse_loop();
+}
+
+void parser::parse_for()
+{
+    scan->must_be(symbol::for_sym);
+    scan->must_be(symbol::identifier);
+    scan->must_be(symbol::in_sym);
+
+    if (scan->have(symbol::reverse_sym)) 
+    {
+        scan->must_be(symbol::reverse_sym);
+    }
+
+    parse_range();
+    parse_loop();
 }

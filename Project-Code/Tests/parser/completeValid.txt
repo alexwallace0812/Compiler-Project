@@ -1,0 +1,34 @@
+program comp is
+    a : integer;
+begin
+    if a < 10 then
+        a := a + 1;
+    elsif a < 20 then
+        a := a + 2;
+    else
+        a := a + 3;
+    end if;
+
+    loop
+        a := a - 1;
+        exit when a = 0;
+    end loop;
+
+    while a < 100 loop
+        a := a * 2;
+    end loop;
+
+    for i in 1..10 loop
+        null;
+    end loop;
+
+    for i in reverse 1..10 loop
+        null;
+    end loop;
+
+    if a > 0 then
+        if a > 5 then
+            null;
+        end if;
+    end if;
+end;
