@@ -65,7 +65,7 @@ void parser::parse_statement_list()
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
-    while(scan->have(symbol::null_sym) or scan->have(symbol::write_sym) or scan->have(symbol::writeln_sym))
+    while(statement_can_start())
     {
         parse_statement();
         scan->must_be(symbol::semicolon_sym);
@@ -81,6 +81,22 @@ void parser::parse_statement()
     else if (scan->have(symbol::writeln_sym))
     {
         parse_write_line();
+    }
+    else if (scan->have(symbol::identifier))
+    {
+        parse_simp_statement();
+    }
+    else if (scan->have(symbol::exit_sym))
+    {
+        parse_exit();
+    }
+    else if (scan->have(symbol::return_sym))
+    {
+        parse_return();
+    }
+    else if (scan->have(symbol::read_sym))
+    {
+        parse_read();
     }
     else
     {
@@ -398,4 +414,73 @@ void parser::parse_write_line()
     {
         scan->must_be(symbol::right_paren_sym);
     }
+}
+
+void parser::parse_simp_statement()
+{
+    scan->must_be(symbol::identifier);
+
+    if(scan->have(symbol::becomes_sym))
+    {
+        scan->must_be(symbol::becomes_sym);
+        parse_expression();
+    }
+    else if (scan->have(symbol::left_paren_sym))
+    {
+        scan->must_be(symbol::left_paren_sym);
+        parse_expression();
+
+        while (scan->have(symbol::comma_sym)) 
+        { 
+            scan->must_be(symbol::comma_sym); 
+            parse_expression(); 
+        }
+
+        scan->must_be(symbol::right_paren_sym);
+    }
+}
+
+void parser::parse_exit()
+{
+    scan->must_be(symbol::exit_sym);
+    if (scan->have(symbol::when_sym)) 
+    { 
+        scan->must_be(symbol::when_sym); 
+        parse_expression(); 
+    }
+}
+
+void parser::parse_return()
+{
+    scan->must_be(symbol::return_sym);
+    if (expression_can_start())
+    {
+        parse_expression();
+    }
+}
+
+void parser::parse_read()
+{
+    scan->must_be(symbol::read_sym);
+    bool parentheses = scan->have(symbol::left_paren_sym);
+    if (parentheses) 
+    {
+        scan->must_be(symbol::left_paren_sym);
+    }
+    scan->must_be(symbol::identifier);
+    while (scan->have(symbol::comma_sym)) 
+    { 
+        scan->must_be(symbol::comma_sym); 
+        scan->must_be(symbol::identifier); 
+    }
+    if (parentheses) 
+    {
+        scan->must_be(symbol::right_paren_sym);
+    }
+}
+
+bool parser::statement_can_start()
+{
+    symbol::symbol_type s = scan->this_token()->get_sym();
+    return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym;
 }

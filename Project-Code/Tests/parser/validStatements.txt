@@ -1,0 +1,18 @@
+program stmts is
+    a, b : integer;
+    r    : real;
+    procedure p(x : value integer) is begin null; end;
+begin
+    a := 1 + 2;
+    r := 2.5;
+    a := b;
+    p(a + 1);
+    read a;
+    read(a, b);
+    exit when a < 10;
+    exit;
+    return;
+    return a + 1;
+    write a;
+    null;
+end;
