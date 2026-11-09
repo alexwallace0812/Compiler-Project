@@ -26,27 +26,96 @@
 
 parser::parser(scanner* s, id_table* id_t, error_handler* e)
 {
-    scan = s;
+    scan = s; // Assign current scanner state to parser
     id_tab = id_t;
     error = e;
-    scan->get_token();
+    scan->get_token(); // Parser usess input scanner to get the token at each scan.
+}
+
+
+bool parser::relation_op_follows() // Help boolean functions, how to recognize optional components/relational operators
+{
+    symbol::symbol_type s = scan->this_token()->get_sym();
+        return s == symbol::greater_than_sym or s == symbol::less_than_sym or s == symbol::equals_sym or s == symbol::not_equals_sym or s == symbol::less_or_equal_sym or s == symbol::greater_or_equal_sym;
+}
+
+bool parser::expression_can_start()
+{
+    symbol::symbol_type s = scan->this_token()->get_sym();
+    return s == symbol::identifier or s == symbol::integer or s == symbol::real_num or s == symbol::strng or s == symbol::true_sym or s == symbol::false_sym or s == symbol::not_sym or s == symbol::odd_sym or s == symbol::left_paren_sym or s == symbol::plus_sym or s == symbol::minus_sym;
+}
+
+
+bool parser::statement_can_start()
+{
+    symbol::symbol_type s = scan->this_token()->get_sym();
+    return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym or s == symbol::read_sym or s == symbol::if_sym or s == symbol::loop_sym or s == symbol::while_sym or s == symbol::for_sym;
 }
 
 
 
-void parser::parse_program()
+void parser::parse_statement() // Dispatcher, calls specific parsing grammar checks
+{
+
+    if (scan->have(symbol::write_sym))
+    {
+        parse_write(); // Parses write function
+    }
+    else if (scan->have(symbol::writeln_sym))
+    {
+        parse_write_line(); // Parses write function
+    }
+    else if (scan->have(symbol::identifier))
+    {
+        parse_simp_statement(); // Parses write function
+    }
+    else if (scan->have(symbol::exit_sym))
+    {
+        parse_exit(); // Parses write function
+    }
+    else if (scan->have(symbol::return_sym))
+    {
+        parse_return(); // Parses write function
+    }
+    else if (scan->have(symbol::read_sym))
+    {
+        parse_read(); // Parses write function
+    }
+    else if (scan->have(symbol::if_sym))
+    {
+        parse_if(); // Parses write function
+    }
+    else if (scan->have(symbol::loop_sym))
+    {
+        parse_loop(); // Parses write function
+    }
+    else if (scan->have(symbol::while_sym))
+    {
+        parse_while(); // Parses while statements 
+    }
+    else if (scan->have(symbol::for_sym))
+    {
+        parse_for(); // Parses for symbol
+    }
+    else
+    {
+        scan->must_be(symbol::null_sym); // Dispatcher falls back on null sym
+    }
+}
+
+void parser::parse_program() // Grammar check for opening program syntax
 {
     scan->must_be(symbol::program_sym);
     scan->must_be(symbol::identifier);
     scan->must_be(symbol::is_sym);
     parse_block();
     scan->must_be(symbol::semicolon_sym);
-    if(!scan->have(symbol::end_of_program))
+    if(!scan->have(symbol::end_of_program)) // Nothing after program line
     {
         error->flag(scan->this_token(), 77);
     }
 }
-void parser::parse_block()
+void parser::parse_block() // Block syntax check
 {
     while(scan->have(symbol::identifier) or scan->have(symbol::procedure_sym) or scan->have(symbol::function_sym))
     {
@@ -58,9 +127,12 @@ void parser::parse_block()
     scan->must_be(symbol::end_sym);
 
     if (scan->have(symbol::identifier))
+    {
         scan->get_token(); 
+    }
 }
-void parser::parse_statement_list()
+
+void parser::parse_statement_list() // Grammar check statement list
 {
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
@@ -71,57 +143,10 @@ void parser::parse_statement_list()
         scan->must_be(symbol::semicolon_sym);
     }
 }
-void parser::parse_statement()
-{
-
-    if (scan->have(symbol::write_sym))
-    {
-        parse_write();
-    }
-    else if (scan->have(symbol::writeln_sym))
-    {
-        parse_write_line();
-    }
-    else if (scan->have(symbol::identifier))
-    {
-        parse_simp_statement();
-    }
-    else if (scan->have(symbol::exit_sym))
-    {
-        parse_exit();
-    }
-    else if (scan->have(symbol::return_sym))
-    {
-        parse_return();
-    }
-    else if (scan->have(symbol::read_sym))
-    {
-        parse_read();
-    }
-    else if (scan->have(symbol::if_sym))
-    {
-        parse_if();
-    }
-    else if (scan->have(symbol::loop_sym))
-    {
-        parse_loop();
-    }
-    else if (scan->have(symbol::while_sym))
-    {
-        parse_while();
-    }
-    else if (scan->have(symbol::for_sym))
-    {
-        parse_for();
-    }
-    else
-    {
-        scan->must_be(symbol::null_sym);
-    }
-}
 
 
-void parser::parse_declaration()
+
+void parser::parse_declaration() // Grammar check for declarations, three branches: procedure, function, or ident list as fall back
 {
     if(scan->have(symbol::procedure_sym))
     {
@@ -179,7 +204,9 @@ void parser::parse_declaration()
     }
 }
 
-void parser::parse_ident_list()
+
+
+void parser::parse_ident_list() // Identifier list grammar
 {
     scan->must_be(symbol::identifier);
     while(scan->have(symbol::comma_sym))
@@ -189,7 +216,7 @@ void parser::parse_ident_list()
     }
 }
 
-void parser::parse_type()
+void parser::parse_type() // Grammar for identifiers
 {
     
     if(scan->have(symbol::integer_sym))
@@ -214,7 +241,8 @@ void parser::parse_type()
     }
 }
 
-void parser::parse_param_list()
+void parser::parse_param_list() // Grammar for parameters
+
 {
     parse_param();
     while(scan->have(symbol::semicolon_sym))
@@ -224,7 +252,7 @@ void parser::parse_param_list()
     }
 }
 
-void parser::parse_param_kind()
+void parser::parse_param_kind() // grammar for parameter types, fall back on last section
 {
     if(scan->have(symbol::value_sym))
     {
@@ -240,7 +268,7 @@ void parser::parse_param_kind()
     }
 }
 
-void parser::parse_param()
+void parser::parse_param() // Specific parameters, ident -> : -> param kind
 {
     parse_ident_list();
     scan->must_be(symbol::colon_sym);
@@ -248,7 +276,7 @@ void parser::parse_param()
     parse_type();
 }
 
-void parser::parse_expression()
+void parser::parse_expression() // expression grammar
 {
     parse_simp_expression();
     if(relation_op_follows())
@@ -263,7 +291,7 @@ void parser::parse_expression()
     }
 }
 
-void parser::parse_simp_expression()
+void parser::parse_simp_expression() // Helper for expression grammar/simple expression
 {
     parse_expr_2();
 
@@ -274,7 +302,7 @@ void parser::parse_simp_expression()
     }
 }
 
-void parser::parse_expr_2()
+void parser::parse_expr_2() // Expression 2
 {
     parse_term();
     
@@ -285,14 +313,14 @@ void parser::parse_expr_2()
     }
 }
 
-void parser::parse_range()
+void parser::parse_range() // Range grammar
 {
     parse_simp_expression();
-    scan->must_be(symbol::range_sym);
+    scan->must_be(symbol::range_sym); // Must have range symbol
     parse_simp_expression();
 }
 
-void parser::parse_term()
+void parser::parse_term() // Term grammar
 {
     parse_factor();
     while (scan->have(symbol::asterisk_sym) 
@@ -304,7 +332,7 @@ void parser::parse_term()
     }
 }
 
-void parser::parse_factor()
+void parser::parse_factor() // Factor grammar
 {
     if (scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym))
     {
@@ -373,19 +401,9 @@ void parser::parse_primary()
     } 
 }
 
-bool parser::relation_op_follows()
-{
-    symbol::symbol_type s = scan->this_token()->get_sym();
-        return s == symbol::greater_than_sym or s == symbol::less_than_sym or s == symbol::equals_sym or s == symbol::not_equals_sym or s == symbol::less_or_equal_sym or s == symbol::greater_or_equal_sym;
-}
 
-bool parser::expression_can_start()
-{
-    symbol::symbol_type s = scan->this_token()->get_sym();
-    return s == symbol::identifier or s == symbol::integer or s == symbol::real_num or s == symbol::strng or s == symbol::true_sym or s == symbol::false_sym or s == symbol::not_sym or s == symbol::odd_sym or s == symbol::left_paren_sym or s == symbol::plus_sym or s == symbol::minus_sym;
-}
 
-void parser::parse_write()
+void parser::parse_write() // Write function grammar, allows for optional parentheses which is why bool flag is used.
 {
     scan->must_be(symbol::write_sym);
 
@@ -407,7 +425,7 @@ void parser::parse_write()
     }
 }
 
-void parser::parse_write_line()
+void parser::parse_write_line() // Same as write but the middle expression is optional, expr can start helper
 {
     scan->must_be(symbol::writeln_sym);
 
@@ -432,7 +450,7 @@ void parser::parse_write_line()
     }
 }
 
-void parser::parse_simp_statement()
+void parser::parse_simp_statement() // Simple statement grammar
 {
     scan->must_be(symbol::identifier);
 
@@ -456,7 +474,7 @@ void parser::parse_simp_statement()
     }
 }
 
-void parser::parse_exit()
+void parser::parse_exit() // Exit grammar
 {
     scan->must_be(symbol::exit_sym);
     if (scan->have(symbol::when_sym)) 
@@ -466,7 +484,7 @@ void parser::parse_exit()
     }
 }
 
-void parser::parse_return()
+void parser::parse_return() // Return grammar
 {
     scan->must_be(symbol::return_sym);
     if (expression_can_start())
@@ -475,7 +493,7 @@ void parser::parse_return()
     }
 }
 
-void parser::parse_read()
+void parser::parse_read() // Read
 {
     scan->must_be(symbol::read_sym);
     bool parentheses = scan->have(symbol::left_paren_sym);
@@ -495,13 +513,7 @@ void parser::parse_read()
     }
 }
 
-bool parser::statement_can_start()
-{
-    symbol::symbol_type s = scan->this_token()->get_sym();
-    return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym or s == symbol::read_sym or s == symbol::if_sym or s == symbol::loop_sym or s == symbol::while_sym or s == symbol::for_sym;
-}
-
-void parser::parse_if()
+void parser::parse_if() // if grammar
 {
     scan->must_be(symbol::if_sym);
     parse_expression();
@@ -526,22 +538,22 @@ void parser::parse_if()
     scan->must_be(symbol::if_sym);
 }
 
-void parser::parse_loop()
+void parser::parse_loop() // Loop grammar, second loop symbol declares end
 {
     scan->must_be(symbol::loop_sym);
     parse_statement_list();
     scan->must_be(symbol::end_sym);
-    scan->must_be(symbol::loop_sym);                   // "end loop"
+    scan->must_be(symbol::loop_sym);
 }
 
-void parser::parse_while()
+void parser::parse_while() // While grammar
 {
     scan->must_be(symbol::while_sym);
     parse_expression();
     parse_loop();
 }
 
-void parser::parse_for()
+void parser::parse_for() // For grammar, includes range and loop functionality
 {
     scan->must_be(symbol::for_sym);
     scan->must_be(symbol::identifier);
