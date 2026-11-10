@@ -1,9 +1,11 @@
 /*
- * parser.h
+ * File by: Alex Wallace
+ * Course: CSC-4510 Programming Language Design and Translation
+ * Date: November 2026
  *
- * Written:            4 November 2026
- * Last modified:      4 November 2026
- *      Author: Alex Wallace
+ * parser.h — recursive-descent LL(1) parser for lille. 
+ * One function per grammar nonterminal
+ * FIRST and FOLLOW sets drive main design and grammar decisions
  */
 
 
@@ -12,12 +14,6 @@
 #define PARSER_H
 
 
-#include <iostream>
-#include <fstream>
-#include <string>
-
-#include "symbol.h"
-#include "token.h"
 #include "scanner.h"
 #include "error_handler.h"
 #include "id_table.h"

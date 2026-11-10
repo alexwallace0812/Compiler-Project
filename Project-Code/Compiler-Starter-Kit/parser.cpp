@@ -1,27 +1,21 @@
 /*
- * parser.cpp
+ * File by: Alex Wallace
+ * Course: CSC-4510 Programming Language Design and Translation
+ * Date: November 2026
  *
- * Written:            4 November 2026
- * Last modified:      9 November 2026
- *      Author: Alex Wallace
+ * parser.h — recursive-descent LL(1) parser for lille. 
+ * One function per grammar nonterminal
+ * FIRST and FOLLOW sets drive main design and grammar decisions
+ * Each function relates to a specific syntax of Lille
+ * Takes tokens from scanner without rescanning file
  */
 
-#include <iostream>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include <cctype>
-#include <cmath>
-#include <climits>
 
 #include "symbol.h"
 #include "parser.h"
 #include "error_handler.h"
 #include "token.h"
 #include "scanner.h"
-#include "lille_exception.h"
-
-
 
 
 parser::parser(scanner* s, id_table* id_t, error_handler* e)
@@ -53,9 +47,9 @@ bool parser::statement_can_start()
 }
 
 
-
 void parser::parse_statement() // Dispatcher, calls specific parsing grammar checks
 {
+    // FIRST set
 
     if (scan->have(symbol::write_sym))
     {
@@ -141,7 +135,7 @@ void parser::parse_statement_list() // Grammar check statement list
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
-    while(statement_can_start())
+    while(statement_can_start()) // FOLLOW
     {
         parse_statement();
         scan->must_be(symbol::semicolon_sym);
