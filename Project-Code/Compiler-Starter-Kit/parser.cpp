@@ -348,7 +348,7 @@ void parser::parse_factor() // Factor grammar
     }
 }
 
-void parser::parse_primary()
+void parser::parse_primary() // Primary syntax in Lille using have and must_be
 {
     if (scan->have(symbol::not_sym))
     { 
