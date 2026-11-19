@@ -21,7 +21,7 @@ using namespace std;
 id_table::id_table(error_handler* err)
 {
     error = err;
-    // INSERT CODE HERE
+    scopes.push_back(nullptr);
 }
 
 
@@ -42,3 +42,37 @@ void id_table::dump_id_table(bool dump_all)
         // INSERT CODE HERE
 	}
 }
+
+
+    void id_table::enter_scope()
+	{
+		scopes.push_back(nullptr);
+	}
+
+
+
+    void id_table::exit_scope()
+	{
+		dump_id_table(true);
+		destroy_tree(scopes.back());
+		scopes.pop_back();
+	}
+
+	id_table_node* id_table::enter_name(string name, lille_type t, lille_kind k, int line, int pos)
+	{
+		if(bst_search(scopes.back(), name) != nullptr)
+		{
+			error->flag(line, pos, 82);
+		}
+		
+	}
+	
+	id_table_node* id_table::find_name(string name)
+	{
+		for(int lev = scopes.size() - 1; lev >= 0; lev--)
+		{
+			id_table_node* n = bst_search(scopes[lev], name);
+			if (n != nullptr) return n;
+		}
+		return nullptr;
+	}
