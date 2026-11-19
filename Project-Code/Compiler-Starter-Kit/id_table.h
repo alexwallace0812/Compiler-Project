@@ -24,21 +24,22 @@ private:
 	error_handler* error;
     vector<id_table_node*> scopes;
 
+    void destroy_tree(id_table_node* node);
+    id_table_node* bst_search(id_table_node* node, string name);
+
 public:
     id_table(error_handler* err);
-    
-    void dump_id_table(bool dump_all = true);
     void enter_scope();
     void exit_scope();
     id_table_node* enter_name(string name, lille_type t, lille_kind k, int line, int pos);
     id_table_node* find_name(string name);
-    void dump_id_table();
+    void dump_id_table(bool dump_all = true);
 };
 
 
 class id_table_node 
 {
-    private:
+    public:
     string name;
     lille_type type;
     lille_kind kind;
