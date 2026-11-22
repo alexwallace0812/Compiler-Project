@@ -201,6 +201,7 @@ bool process_command_line(int argc, char *argv[]) {
 				err = new error_handler(source_filename, listing_filename);
 
 			// THE FOLLOWIG CODE IS FOR TESTING PURPOSES ONLY.
+						id_tab = new id_table(err);
                         scan = new scanner(source_filename, id_tab, err);
 						parse = new parser(scan, id_tab, err); // 11/4 Added parser object to the compiler
 						parse->parse_program();

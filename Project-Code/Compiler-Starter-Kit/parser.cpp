@@ -178,13 +178,13 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
     }
     else
     {
-        parse_ident_list();
+        vector<ident_info> ids = parse_ident_list();
         scan->must_be(symbol::colon_sym);
         if(scan->have(symbol::constant_sym))
         {
             scan->get_token();
         }
-        parse_type();
+        lille_type type = parse_type();
         if(scan->have(symbol::becomes_sym))
         {
             scan->must_be(symbol::becomes_sym);
@@ -198,44 +198,61 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
                 error->flag(scan->this_token(), 3);
             }
         }
+
         scan->must_be(symbol::semicolon_sym);
     }
 }
 
 
 
-void parser::parse_ident_list() // Identifier list grammar
+vector<ident_info> parser::parse_ident_list() // Identifier list grammar
 {
+    vector<ident_info> result;
+    ident_info id;
+    id.name = scan->this_token()->get_identifier_value();
+    id.line = scan->this_token()->get_line_number();
+    id.pos = scan->this_token()->get_pos_on_line();
+    result.push_back(id);
     scan->must_be(symbol::identifier);
     while(scan->have(symbol::comma_sym))
     {
         scan->must_be(symbol::comma_sym);
+        id.name = scan->this_token()->get_identifier_value();
+        id.line = scan->this_token()->get_line_number();
+        id.pos = scan->this_token()->get_pos_on_line();
+        result.push_back(id);
         scan->must_be(symbol::identifier);
     }
+    return result;
 }
 
-void parser::parse_type() // Grammar for identifiers
+lille_type parser::parse_type() // Grammar for identifiers
 {
     
     if(scan->have(symbol::integer_sym))
     {
         scan->get_token();
+        return lille_type(lille_type::type_integer);
     }
     else if(scan->have(symbol::real_sym))
     {
         scan->get_token();
+        return lille_type(lille_type::type_real);
     }
     else if(scan->have(symbol::string_sym))
     {
         scan->get_token();
+        return lille_type(lille_type::type_string);
     }
     else if(scan->have(symbol::boolean_sym))
     {
         scan->get_token();
+        return lille_type(lille_type::type_boolean);
     }
     else
     {
         scan->must_be(symbol::integer_sym);
+        return lille_type(lille_type::type_integer);
     }
 }
 
@@ -250,23 +267,26 @@ void parser::parse_param_list() // Grammar for parameters
     }
 }
 
-void parser::parse_param_kind() // grammar for parameter types, fall back on last section
+lille_kind parser::parse_param_kind() // grammar for parameter types, fall back on last section
 {
     if(scan->have(symbol::value_sym))
     {
         scan->must_be(symbol::value_sym);
+        return lille_kind(lille_kind::value_param);
     }
     else if(scan->have(symbol::ref_sym))
     {
         scan->must_be(symbol::ref_sym);
+        return lille_kind(lille_kind::ref_param);
     }
     else 
     {
         scan->must_be(symbol::value_sym);
+        return lille_kind(lille_kind::unknown);
     }
 }
 
-void parser::parse_param() // Specific parameters, ident -> : -> param kind
+vector<ident_info> parser::parse_param() // Specific parameters, ident -> : -> param kind
 {
     parse_ident_list();
     scan->must_be(symbol::colon_sym);

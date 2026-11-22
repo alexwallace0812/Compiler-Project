@@ -19,6 +19,17 @@
 #include "id_table.h"
 
 
+struct ident_info {
+    string name;
+    int line, pos;
+};
+
+struct param_info {
+    ident_info id;
+    lille_type type;
+    lille_kind mode;
+};
+
 class parser {
     private:
 
@@ -32,11 +43,11 @@ class parser {
     void parse_statement_list();
     void parse_statement();
     void parse_declaration();
-    void parse_ident_list();
-    void parse_type();
+    vector<ident_info> parse_ident_list();
+    lille_type parse_type();
     void parse_param_list();
-    void parse_param();
-    void parse_param_kind();
+    vector<ident_info> parse_param();
+    lille_kind parse_param_kind();
     void parse_expression();
     void parse_simp_expression();
     void parse_range();
