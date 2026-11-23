@@ -39,14 +39,14 @@ class parser {
 
     // Main parser grammar function declarations
 
-    void parse_block();
+    void parse_block(vector<param_info> params = {});
     void parse_statement_list();
     void parse_statement();
     void parse_declaration();
     vector<ident_info> parse_ident_list();
     lille_type parse_type();
-    void parse_param_list();
-    vector<ident_info> parse_param();
+    vector<param_info> parse_param_list();
+    vector<param_info> parse_param();
     lille_kind parse_param_kind();
     void parse_expression();
     void parse_simp_expression();

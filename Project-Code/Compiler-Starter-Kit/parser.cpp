@@ -100,7 +100,14 @@ void parser::parse_statement() // Dispatcher, calls specific parsing grammar che
 void parser::parse_program() // Grammar check for opening program syntax
 {
     scan->must_be(symbol::program_sym); // <prog> ::= program <ident> is <block> 
+    ident_info name;                                            // capture BEFORE consuming
+    name.name = scan->this_token()->get_identifier_value();
+    name.line = scan->this_token()->get_line_number();
+    name.pos  = scan->this_token()->get_pos_on_line();
     scan->must_be(symbol::identifier);
+
+    id_tab->enter_name(name.name, lille_type(lille_type::type_prog),lille_kind(lille_kind::unknown), name.line, name.pos);
+
     scan->must_be(symbol::is_sym);
     parse_block();
     scan->must_be(symbol::semicolon_sym);
@@ -110,10 +117,15 @@ void parser::parse_program() // Grammar check for opening program syntax
     }
 }
 
-void parser::parse_block() // Block syntax check
+void parser::parse_block(vector<param_info> params) // Block syntax check
 {
     // <block> ::= { <declaration> }* begin <statement_list> end [ <ident> ]
-    
+
+    id_tab->enter_scope();      
+    for (param_info param : params)  
+    {
+        id_tab->enter_name(param.id.name, param.type, lille_kind(param.mode), param.id.line, param.id.pos);
+    }
     while(scan->have(symbol::identifier) or scan->have(symbol::procedure_sym) or scan->have(symbol::function_sym))
     {
         parse_declaration();
@@ -126,6 +138,7 @@ void parser::parse_block() // Block syntax check
     {
         scan->get_token(); 
     }
+    id_tab->exit_scope();
 }
 
 void parser::parse_statement_list() // Grammar check statement list
@@ -149,38 +162,80 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
     if(scan->have(symbol::procedure_sym))
     {
         scan->must_be(symbol::procedure_sym);
+        ident_info name;                                    // flavor-1 capture, single
+        name.name = scan->this_token()->get_identifier_value();
+        name.line = scan->this_token()->get_line_number();
+        name.pos  = scan->this_token()->get_pos_on_line();
         scan->must_be(symbol::identifier);
+
+        vector<param_info> params;
         if(scan->have(symbol::left_paren_sym))
         {
             scan->must_be(symbol::left_paren_sym);
-            parse_param_list();
+            params = parse_param_list();
             scan->must_be(symbol::right_paren_sym);
         }
+        
+        id_table_node* n = id_tab->enter_name(name.name, lille_type(lille_type::type_proc), lille_kind(lille_kind::unknown), name.line, name.pos);
+        if (n != nullptr)
+        {
+            for (param_info p : params)
+            {
+                n->param_types.push_back(p.type);
+                n->param_modes.push_back(p.mode);
+            }
+        }
+
         scan->must_be(symbol::is_sym);
-        parse_block();
+        parse_block(params);
         scan->must_be(symbol::semicolon_sym);
     }
     else if(scan->have(symbol::function_sym))
     {
         scan->must_be(symbol::function_sym);
+        ident_info name;
+        name.name = scan->this_token()->get_identifier_value();
+        name.line = scan->this_token()->get_line_number();
+        name.pos  = scan->this_token()->get_pos_on_line();
         scan->must_be(symbol::identifier);
+
+        vector<param_info> params;
         if(scan->have(symbol::left_paren_sym))
         {
             scan->must_be(symbol::left_paren_sym);
-            parse_param_list();
+            params = parse_param_list();
             scan->must_be(symbol::right_paren_sym);
         }
+
         scan->must_be(symbol::return_sym);
-        parse_type();
+        lille_type ret = parse_type();
+
+        id_table_node* n = id_tab->enter_name(name.name, lille_type::type_func, lille_kind(lille_kind::unknown), name.line, name.pos);
+
+        if (n != nullptr)
+        {
+            for (param_info p : params)
+            {
+                n->param_types.push_back(p.type);
+                n->param_modes.push_back(p.mode);
+            }
+            n->return_type = ret;
+        }
+
         scan->must_be(symbol::is_sym);
-        parse_block();
+        parse_block(params);
         scan->must_be(symbol::semicolon_sym);
     }
     else
     {
+        int int_val;
+        float real_val;
+        string str_val;
+        bool bool_val;
         vector<ident_info> ids = parse_ident_list();
         scan->must_be(symbol::colon_sym);
-        if(scan->have(symbol::constant_sym))
+        bool is_const = scan->have(symbol::constant_sym); 
+        if(is_const)
         {
             scan->get_token();
         }
@@ -188,17 +243,54 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
         if(scan->have(symbol::becomes_sym))
         {
             scan->must_be(symbol::becomes_sym);
-            if(scan->have(symbol::integer) or scan->have(symbol::real_num) or 
-            scan->have(symbol::strng) or scan->have(symbol::true_sym) or scan->have(symbol::false_sym))
+            if(scan->have(symbol::integer))
             {
+                int_val = scan->this_token()->get_integer_value();
+                scan->get_token();
+            }
+            else if(scan->have(symbol::real_num))
+            {
+                real_val = scan->this_token()->get_real_value();
+                scan->get_token();
+            }
+            else if(scan->have(symbol::strng))
+            {
+                str_val = scan->this_token()->get_string_value();
+                scan->get_token();
+            }
+            else if(scan->have(symbol::true_sym) or scan->have(symbol::false_sym))
+            {
+                bool_val = scan->have(symbol::true_sym);
                 scan->get_token();
             }
             else
             {
                 error->flag(scan->this_token(), 3);
             }
+            for (ident_info id : ids)
+            {
+                id_table_node* n = id_tab->enter_name(id.name, type, lille_kind(is_const ? lille_kind::constant : lille_kind::variable), id.line, id.pos);
+                if (n != nullptr and is_const)
+                {
+                    if(type.is_type(lille_type::type_integer)) 
+                    {
+                        n->int_value = int_val;
+                    }
+                    else if(type.is_type(lille_type::type_real))    
+                    {
+                        n->real_value = real_val;
+                    }
+                    else if(type.is_type(lille_type::type_string))  
+                    {
+                        n->string_value = str_val;
+                    }
+                    else if(type.is_type(lille_type::type_boolean)) 
+                    {
+                        n->bool_value = bool_val;
+                    }
+                }
+            }
         }
-
         scan->must_be(symbol::semicolon_sym);
     }
 }
@@ -252,19 +344,32 @@ lille_type parser::parse_type() // Grammar for identifiers
     else
     {
         scan->must_be(symbol::integer_sym);
-        return lille_type(lille_type::type_integer);
+        return lille_type(lille_type::type_unknown);
     }
 }
 
-void parser::parse_param_list() // Grammar for parameters
+vector<param_info> parser::parse_param_list() // Grammar for parameters
 
 {
-    parse_param();
+    vector<param_info> result;
+
+    vector<param_info> ids = parse_param();
+    for(param_info id : ids)
+    {
+        result.push_back(id);
+    }
+
     while(scan->have(symbol::semicolon_sym))
     {
         scan->must_be(symbol::semicolon_sym);
-        parse_param();
+        ids = parse_param();
+        for(param_info id : ids)
+        {
+            result.push_back(id);
+        }
     }
+    
+    return result;
 }
 
 lille_kind parser::parse_param_kind() // grammar for parameter types, fall back on last section
@@ -286,12 +391,19 @@ lille_kind parser::parse_param_kind() // grammar for parameter types, fall back 
     }
 }
 
-vector<ident_info> parser::parse_param() // Specific parameters, ident -> : -> param kind
+vector<param_info> parser::parse_param() // Specific parameters, ident -> : -> param kind
 {
-    parse_ident_list();
+    vector<ident_info> ids = parse_ident_list();
     scan->must_be(symbol::colon_sym);
-    parse_param_kind();
-    parse_type();
+    lille_kind mode = parse_param_kind();
+    lille_type type = parse_type();
+
+    vector<param_info> result;
+    for(ident_info id : ids)
+    {
+        result.push_back({id, type, mode});
+    }
+    return result;
 }
 
 void parser::parse_expression() // expression grammar

@@ -64,7 +64,12 @@ id_table_node* id_table::bst_search(id_table_node* node, string name)
 
 id_table_node* id_table::bst_insert(id_table_node* node, id_table_node* new_id)
 {
-
+	if (node == nullptr) return new_id;              // empty slot: the new node becomes the subtree
+    if (new_id->name < node->name)
+        node->left = bst_insert(node->left, new_id); // reattach whatever comes back
+    else
+        node->right = bst_insert(node->right, new_id);
+    return node;  
 }
 
 void id_table::destroy_tree(id_table_node* node)
