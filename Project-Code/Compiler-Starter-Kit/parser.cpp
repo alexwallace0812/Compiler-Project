@@ -10,12 +10,21 @@
  * Takes tokens from scanner without rescanning file
  */
 
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <string>
+#include <cctype>
+#include <cmath>
+#include <climits>
+
 
 #include "symbol.h"
 #include "parser.h"
 #include "error_handler.h"
 #include "token.h"
 #include "scanner.h"
+#include "lille_exception.h"
 
 
 parser::parser(scanner* s, id_table* id_t, error_handler* e)
@@ -26,6 +35,29 @@ parser::parser(scanner* s, id_table* id_t, error_handler* e)
     scan->get_token(); // Parser usess input scanner to get the token at each scan.
 }
 
+bool parser::is_arith(lille_type t)
+{
+    if(t.get_type() == lille_type::type_integer or t.get_type() == lille_type::type_real)
+    {
+        return true;
+    }
+    else 
+    {
+        return false;
+    }
+}
+
+bool parser::is_ordered(lille_type t)
+{
+    if(is_arith(t) or t.get_type() ==lille_type::type_string or t.get_type() == lille_type::type_boolean)
+    {
+        return true;
+    }
+    else 
+    {
+        return false;
+    }
+}
 
 bool parser::relation_op_follows() // Help boolean functions, how to recognize optional components/relational operators
 {
@@ -267,27 +299,27 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
             {
                 error->flag(scan->this_token(), 3);
             }
-            for (ident_info id : ids)
+        }
+        for (ident_info id : ids)
+        {
+        id_table_node* n = id_tab->enter_name(id.name, type, lille_kind(is_const ? lille_kind::constant : lille_kind::variable), id.line, id.pos);
+            if (n != nullptr and is_const)
             {
-                id_table_node* n = id_tab->enter_name(id.name, type, lille_kind(is_const ? lille_kind::constant : lille_kind::variable), id.line, id.pos);
-                if (n != nullptr and is_const)
+                if(type.is_type(lille_type::type_integer)) 
                 {
-                    if(type.is_type(lille_type::type_integer)) 
-                    {
-                        n->int_value = int_val;
-                    }
-                    else if(type.is_type(lille_type::type_real))    
-                    {
-                        n->real_value = real_val;
-                    }
-                    else if(type.is_type(lille_type::type_string))  
-                    {
-                        n->string_value = str_val;
-                    }
-                    else if(type.is_type(lille_type::type_boolean)) 
-                    {
-                        n->bool_value = bool_val;
-                    }
+                    n->int_value = int_val;
+                }
+                else if(type.is_type(lille_type::type_real))    
+                {
+                    n->real_value = real_val;
+                }
+                else if(type.is_type(lille_type::type_string))  
+                {
+                    n->string_value = str_val;
+                }
+                else if(type.is_type(lille_type::type_boolean)) 
+                {
+                    n->bool_value = bool_val;
                 }
             }
         }
@@ -406,100 +438,225 @@ vector<param_info> parser::parse_param() // Specific parameters, ident -> : -> p
     return result;
 }
 
-void parser::parse_expression() // expression grammar
+lille_type parser::parse_expression() // expression grammar
 {
-    parse_simp_expression();
+    lille_type l = parse_simp_expression(), r;
+
     if(relation_op_follows())
     {
         scan->get_token();
-        parse_simp_expression();
+        r = parse_simp_expression();
+        if(l.get_type() != lille_type::type_unknown and r.get_type() != lille_type::type_unknown)
+        {
+            if(!is_ordered(l) or !is_ordered(r))
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            else if(!((is_arith(l) and is_arith(r)) or (l.get_type() == r.get_type())))
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+        }
+        return lille_type::type_boolean;
     }
     else if(scan->have(symbol::in_sym))
     {
         scan->must_be(symbol::in_sym);
         parse_range();
+        return lille_type::type_boolean;
     }
+    return l;
 }
 
-void parser::parse_simp_expression() // Helper for expression grammar/simple expression
+lille_type parser::parse_simp_expression() // Helper for expression grammar/simple expression
 {
-    parse_expr_2();
+    lille_type l = parse_expr_2(), r;
 
     while(scan->have(symbol::ampersand_sym))
     {
         scan->must_be(symbol::ampersand_sym);
-        parse_expr_2();
+        r = parse_expr_2();
+        if(l.get_type() == lille_type::type_unknown or r.get_type() == lille_type::type_unknown)
+        {
+            l = lille_type::type_unknown;
+        }
+        else
+        {
+            if(l.get_type() != lille_type::type_string or r.get_type() != lille_type::type_string)
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            l = lille_type::type_string;
+        }
     }
+    return l;
 }
 
-void parser::parse_expr_2() // Expression 2
+lille_type parser::parse_expr_2() // Expression 2
 {
-    parse_term();
-    
+    lille_type l = parse_term(), r;
+    bool is_or;
     while(scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym) or scan->have(symbol::or_sym))
     {
+        is_or = scan->have(symbol::or_sym);
         scan->get_token();
-        parse_term();
+        r = parse_term();
+
+        if(l.get_type() == lille_type::type_unknown or r.get_type() == lille_type::type_unknown)
+        {
+            l = lille_type::type_unknown;
+        }
+        else if(is_or)
+        {
+            if(l.get_type() != lille_type::type_boolean or r.get_type() != lille_type::type_boolean)
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            l = lille_type::type_boolean;
+        }
+        else 
+        {
+            if(!is_arith(l) or !is_arith(r))
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            l = (l.get_type() == lille_type::type_integer and r.get_type() == lille_type::type_integer) ? lille_type::type_integer : lille_type::type_real;
+        }
     }
+    return l;
 }
 
 void parser::parse_range() // Range grammar
 {
-    parse_simp_expression();
+    lille_type l = parse_simp_expression();
     scan->must_be(symbol::range_sym); // Must have range symbol
-    parse_simp_expression();
-}
-
-void parser::parse_term() // Term grammar
-{
-    parse_factor();
-    while (scan->have(symbol::asterisk_sym) 
-    or scan->have(symbol::slash_sym) 
-    or scan->have(symbol::and_sym))
+    lille_type u = parse_simp_expression();
+    if(l.get_type() != lille_type::type_unknown and l.get_type() != lille_type::type_integer)
     {
-        scan->get_token();
-        parse_factor();
+        error->flag(scan->this_token(), 84); 
+    }
+    if(u.get_type() != lille_type::type_unknown and u.get_type() != lille_type::type_integer)
+    {
+        error->flag(scan->this_token(), 84); 
     }
 }
 
-void parser::parse_factor() // Factor grammar
+lille_type parser::parse_term() // Term grammar
+{
+    bool is_and;
+    lille_type left = parse_factor(), right;
+    while (scan->have(symbol::asterisk_sym) or scan->have(symbol::slash_sym) or scan->have(symbol::and_sym))
+    {
+        is_and = scan->have(symbol::and_sym);
+        scan->get_token();
+        right = parse_factor();
+
+        if(left.get_type() == lille_type::type_unknown or right.get_type() == lille_type::type_unknown)
+        {
+            left = lille_type::type_unknown;
+        }
+        else if(is_and)
+        {
+            if(left.get_type() != lille_type::type_boolean or right.get_type() != lille_type::type_boolean)
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            left = lille_type::type_boolean;
+        }
+        else
+        {
+            if(!is_arith(left) or !is_arith(right))
+            {
+                error->flag(scan->this_token(), 84); 
+            }
+            left = (left.get_type() == lille_type::type_integer and right.get_type() == lille_type::type_integer) ? lille_type::type_integer : lille_type::type_real;
+        }
+    }
+    return left;
+}
+
+lille_type parser::parse_factor() // Factor grammar
 {
     if (scan->have(symbol::plus_sym) or scan->have(symbol::minus_sym))
     {
         scan->get_token();                  // optional leading sign
-        parse_primary();
+        lille_type t = parse_primary();
+        if(t.get_type() != lille_type::type_unknown and !is_arith(t))
+        {
+            error->flag(scan->this_token(), 84); 
+        }
+        return t;
     }
     else
     {
-        parse_primary();
+        lille_type t = parse_primary();
         if (scan->have(symbol::power_sym))
         {
             scan->must_be(symbol::power_sym);
-            parse_primary();
+            lille_type p = parse_primary();
+            if(t.get_type() == lille_type::type_unknown or p.get_type() == lille_type::type_unknown)
+            {
+                return lille_type::type_unknown;
+            }
+            if(p.get_type() != lille_type::type_integer)
+            {
+                error->flag(scan->this_token(), 84); 
+                return lille_type::type_unknown;
+            }
+            if(!is_arith(t))
+            {
+                error->flag(scan->this_token(), 84); 
+                return lille_type::type_unknown;
+            }
+            if(t.get_type() == lille_type::type_integer)
+            {
+                return lille_type::type_integer;
+            }
+            else
+            {
+                return lille_type::type_real;
+            }
         }
+        return t;
     }
 }
 
-void parser::parse_primary() // Primary syntax in Lille using have and must_be
+lille_type parser::parse_primary() // Primary syntax in Lille using have and must_be
 {
     if (scan->have(symbol::not_sym))
     { 
         scan->must_be(symbol::not_sym);  
-        parse_expression();
+        lille_type t = parse_expression();
+        if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
+        {
+            error->flag(scan->this_token(), 84); 
+        }
+        return lille_type::type_boolean;
     }
     else if (scan->have(symbol::odd_sym)) 
     { 
         scan->must_be(symbol::odd_sym); 
-        parse_expression(); 
+        lille_type t = parse_expression();
+        if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_integer)
+        {
+            error->flag(scan->this_token(), 84); 
+        }
+        return lille_type::type_boolean;
     }
     else if (scan->have(symbol::left_paren_sym))
     {
         scan->must_be(symbol::left_paren_sym);
-        parse_simp_expression();
+        lille_type t = parse_simp_expression();
         scan->must_be(symbol::right_paren_sym);
+        return t;
     }
     else if (scan->have(symbol::identifier))
     {
+        ident_info id;
+        
+        id.name = scan->this_token()->get_identifier_value();
+        id.line = scan->this_token()->get_line_number();
+        id.pos = scan->this_token()->get_pos_on_line();
         scan->must_be(symbol::identifier);
         if (scan->have(symbol::left_paren_sym))
         {
@@ -511,23 +668,60 @@ void parser::parse_primary() // Primary syntax in Lille using have and must_be
                 parse_expression(); 
             }
             scan->must_be(symbol::right_paren_sym);
+            id_table_node* n = id_tab->find_name(id.name);
+            if(n == nullptr)
+            {
+                error->flag(scan->this_token(), 81); 
+                return lille_type(lille_type::type_unknown);
+            }
+            if(n->type.is_type(lille_type::type_func))
+            {
+                return n->return_type;
+            }
+            else
+            {
+                error->flag(scan->this_token(), 91); 
+                return lille_type::type_unknown;
+            }
+        }
+        else
+        {
+            id_table_node* n = id_tab->find_name(id.name);
+            if(n == nullptr)
+            {
+                error->flag(scan->this_token(), 81); 
+            }
+            if(n->type.is_type(lille_type::type_proc) or n->type.is_type(lille_type::type_func))
+            {
+                error->flag(scan->this_token(), 91); 
+            }
+            return n->type;
         }
     }
-    else if (scan->have(symbol::integer) or scan->have(symbol::real_num))  
+    else if (scan->have(symbol::integer))  
     {
         scan->get_token();
+        return lille_type::type_integer;
+    }
+    else if (scan->have(symbol::real_num))
+    {
+        scan->get_token();
+        return lille_type::type_real;
     }
     else if (scan->have(symbol::strng))
     {
         scan->get_token();
+        return lille_type::type_string;
     }
     else if (scan->have(symbol::true_sym) or scan->have(symbol::false_sym)) 
     {
         scan->get_token();
+        return lille_type::type_boolean;
     }
     else 
     {
         scan->must_be(symbol::identifier);
+        return lille_type::type_unknown;
     } 
 }
 

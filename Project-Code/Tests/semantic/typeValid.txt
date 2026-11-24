@@ -1,0 +1,24 @@
+-- every operator combination, valid types only; expect 0 errors
+program types is
+    a, x : integer;
+    r    : real;
+    s    : string;
+    flag : boolean;
+begin
+    write 1 + 2 * 3;
+    write 1 + 2.5;
+    write 1.5 * 2;
+    write 2 ** 3;
+    write 2.0 ** 3;
+    write -a;
+    write s & "tail";
+    write ((1 + 2) * 3);
+    write r;
+    if a < 10 then null; end if;
+    if s = "abc" then null; end if;
+    if flag and not a in 1..10 then null; end if;
+    loop
+        exit when a < 5;
+    end loop;
+    writeln;
+end;

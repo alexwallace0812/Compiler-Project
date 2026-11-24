@@ -48,13 +48,13 @@ class parser {
     vector<param_info> parse_param_list();
     vector<param_info> parse_param();
     lille_kind parse_param_kind();
-    void parse_expression();
-    void parse_simp_expression();
+    lille_type parse_expression();
+    lille_type parse_simp_expression();
     void parse_range();
-    void parse_expr_2();
-    void parse_term();
-    void parse_factor();
-    void parse_primary();
+    lille_type parse_expr_2();
+    lille_type parse_term();
+    lille_type parse_factor();
+    lille_type parse_primary();
     void parse_write();
     void parse_write_line();
     void parse_simp_statement();
@@ -71,6 +71,8 @@ class parser {
     bool relation_op_follows();
     bool expression_can_start();
     bool statement_can_start();
+    bool is_arith(lille_type t);
+    bool is_ordered(lille_type t);
 
     public:
     parser(scanner* s, id_table* id_t, error_handler* e); // Constructor

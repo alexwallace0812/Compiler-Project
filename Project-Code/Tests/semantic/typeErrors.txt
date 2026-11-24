@@ -1,0 +1,18 @@
+-- one deliberate semantic error per construct; expect 9 errors total
+-- 84 = wrong operand types, 81 = undeclared identifier
+program terr is
+    a, x : integer;
+    r    : real;
+    s    : string;
+    flag : boolean;
+begin
+    write flag + 1;                 -- 84: boolean into +
+    write s & a;                    -- 84: & needs two strings
+    write a and x;                  -- 84: and needs two booleans
+    write 2 ** 2.5;                 -- 84: exponent must be integer
+    write not a;                    -- 84: not needs a boolean
+    write odd s;                    -- 84: odd needs an integer
+    if s = 5 then null; end if;     -- 84: relop across types
+    if a then null; end if;         -- 84: condition must be boolean
+    write y + 1;                    -- 81: y never declared
+end;
