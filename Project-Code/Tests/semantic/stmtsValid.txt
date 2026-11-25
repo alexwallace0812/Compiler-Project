@@ -1,0 +1,36 @@
+program stmts is
+    a, b : integer;
+    r    : real;
+    s    : string;
+    flag : boolean;
+    procedure p(v : value integer; w : ref integer) is
+    begin
+        w := v;
+        return;
+    end p;
+    function f(n : value integer) return integer is
+    begin
+        return n * 2;
+    end f;
+begin
+    a := 1;
+    r := a;
+    r := 2.5;
+    s := "hi";
+    flag := a < 10;
+    p(a, b);
+    b := f(3);
+    if flag then null; end if;
+    while b > 0 loop
+        exit when b = 1;
+        b := b - 1;
+    end loop;
+    for i in 1..5 loop
+        b := b + i;
+    end loop;
+    read a;
+    read(a, b);
+    write a, r;
+    writeln(s);
+    null;
+end stmts;

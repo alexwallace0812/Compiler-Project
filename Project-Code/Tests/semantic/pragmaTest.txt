@@ -1,0 +1,13 @@
+program prag is
+    x, y : integer;
+begin
+    x := 1;
+    pragma trace(x);
+    pragma untrace(x);
+    pragma debug(on);
+    pragma debug(off);
+    pragma trace(y);
+    pragma debug(off);
+    pragma error_limit(5);
+    y := 2;
+end;

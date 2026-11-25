@@ -565,8 +565,12 @@ lille_type parser::parse_expr_2() // Expression 2
             if(l.get_type() != lille_type::type_boolean or r.get_type() != lille_type::type_boolean)
             {
                 error->flag(scan->this_token(), 84); 
+                l = lille_type::type_unknown;
             }
-            l = lille_type::type_boolean;
+            else
+            {
+                l = lille_type::type_boolean;
+            }
         }
         else 
         {
@@ -613,9 +617,13 @@ lille_type parser::parse_term() // Term grammar
         {
             if(left.get_type() != lille_type::type_boolean or right.get_type() != lille_type::type_boolean)
             {
-                error->flag(scan->this_token(), 84); 
+                error->flag(scan->this_token(), 84);
+                left = lille_type::type_unknown;
             }
-            left = lille_type::type_boolean;
+            else
+            {
+                left = lille_type::type_boolean;
+            }
         }
         else
         {
@@ -684,6 +692,7 @@ lille_type parser::parse_primary() // Primary syntax in Lille using have and mus
         if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
         {
             error->flag(scan->this_token(), 84); 
+            return lille_type::type_unknown;
         }
         return lille_type::type_boolean;
     }
@@ -693,7 +702,8 @@ lille_type parser::parse_primary() // Primary syntax in Lille using have and mus
         lille_type t = parse_expression();
         if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_integer)
         {
-            error->flag(scan->this_token(), 84); 
+            error->flag(scan->this_token(), 84);
+            return lille_type::type_unknown;
         }
         return lille_type::type_boolean;
     }
@@ -744,6 +754,7 @@ lille_type parser::parse_primary() // Primary syntax in Lille using have and mus
             if(n == nullptr)
             {
                 error->flag(scan->this_token(), 81); 
+                return lille_type(lille_type::type_unknown);
             }
             if(n->type.is_type(lille_type::type_proc) or n->type.is_type(lille_type::type_func))
             {

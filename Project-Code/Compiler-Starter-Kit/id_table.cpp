@@ -23,6 +23,10 @@ id_table::id_table(error_handler* err)
 {
     error = err;
     scopes.push_back(nullptr);
+	enter_predefined("INT2REAL",  lille_type::type_integer, lille_type::type_real);
+	enter_predefined("REAL2INT",  lille_type::type_real,    lille_type::type_integer);
+	enter_predefined("INT2STRING", lille_type::type_integer, lille_type::type_string);
+	enter_predefined("REAL2STRING", lille_type::type_real,  lille_type::type_string);
 }
 
 id_table_node::id_table_node(string n, lille_type t, lille_kind k, int level, int line, int pos)
@@ -38,6 +42,7 @@ id_table_node::id_table_node(string n, lille_type t, lille_kind k, int level, in
 	string_value = "";
 	bool_value = false;
 	traced = false;
+	trace_set_by_pragma = false;
 	left = nullptr;
 	right = nullptr;
 }
@@ -88,7 +93,7 @@ void id_table::dump_id_table(bool dump_all)
 {
 	if (!dump_all)
 	{
-		cout << "Dump of idtable for current scope only." << endl;
+		cout << "Dump of idtxable for current scope only." << endl;
 		cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
         int lev = scopes.size() - 1;
         cout << "Scope level " << lev << endl << "-------------" << endl;
@@ -164,7 +169,19 @@ cout << endl;
 		scopes.back() = bst_insert(scopes.back(), new_id);
     	return new_id;
 	}
-	
+
+	id_table_node* id_table::enter_predefined(string name, lille_type param, lille_type ret)
+	{
+		id_table_node* n = enter_name(name, lille_type(lille_type::type_func), lille_kind(lille_kind::unknown), 0, 0);
+		if (n != nullptr)
+		{
+			n->param_types.push_back(param);
+			n->param_modes.push_back(lille_kind(lille_kind::value_param));
+			n->return_type = ret;
+		}
+		return n;
+	}
+
 	id_table_node* id_table::find_name(string name)
 	{
 		for(int lev = scopes.size() - 1; lev >= 0; lev--)
@@ -173,5 +190,29 @@ cout << endl;
 			if (n != nullptr) return n;
 		}
 		return nullptr;
+	}
+
+	void id_table::set_all_traced(bool on)
+	{
+		for (id_table_node* root : scopes)
+			flag_all(root, on);
+	}
+
+	void id_table::flag_all(id_table_node* node, bool on)
+	{
+		if(node == nullptr) 
+		{
+			return;
+		}
+		if(on)  
+		{
+			node->traced = true;
+		}
+		else     
+		{
+			node->traced = node->trace_set_by_pragma; 
+		}
+		flag_all(node->left, on);
+		flag_all(node->right, on);
 	}
 

@@ -1,5 +1,3 @@
--- one deliberate semantic error per construct; expect 9 errors total
--- 84 = wrong operand types, 81 = undeclared identifier
 program terr is
     a, x : integer;
     r    : real;

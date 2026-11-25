@@ -37,6 +37,7 @@ class id_table_node
     vector<lille_kind> param_modes;
     lille_type return_type;
     bool traced;
+    bool trace_set_by_pragma;
 
     id_table_node *left, *right;
 
@@ -61,6 +62,9 @@ public:
     id_table_node* enter_name(string name, lille_type t, lille_kind k, int line, int pos);
     id_table_node* find_name(string name);
     void dump_id_table(bool dump_all = true);
+    void set_all_traced(bool on);
+    void flag_all(id_table_node* node, bool on);
+    id_table_node* enter_predefined(string name, lille_type param, lille_type ret);
 };
 
 #endif /* ID_TABLE_H_ */
