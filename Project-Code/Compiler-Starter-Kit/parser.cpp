@@ -78,6 +78,42 @@ bool parser::statement_can_start()
     return s == symbol::null_sym or s == symbol::write_sym or s == symbol::writeln_sym or s == symbol::identifier or s == symbol::exit_sym or s == symbol::return_sym or s == symbol::read_sym or s == symbol::read_sym or s == symbol::if_sym or s == symbol::loop_sym or s == symbol::while_sym or s == symbol::for_sym;
 }
 
+bool parser::assignable(id_table_node* n)
+{
+    return n->kind.is_kind(lille_kind::variable) or n->kind.is_kind(lille_kind::ref_param);
+}
+
+bool parser::compatible(lille_type targ, lille_type expr)
+{
+    return targ.is_type(expr.get_type()) or (targ.is_type(lille_type::type_real)) and expr.is_type(lille_type::type_integer);
+}
+
+void parser::check_args(id_table_node* n, vector<lille_type> args, vector<bool> bare)
+{
+    if (args.size() != n->param_types.size())
+    { 
+        error->flag(scan->this_token(), 84); 
+        return; 
+    } 
+    for (int i = 0; i < args.size(); i++)
+    {
+        if(args[i].get_type() == lille_type::type_unknown)
+        {
+            continue;
+        }                 // already reported inside the arg
+        if (n->param_modes[i].is_kind(lille_kind::ref_param))
+        {
+            if(!bare[i]) 
+            {
+                error->flag(scan->this_token(), 85);    
+            }                     // literal/expression to a ref parameter
+        }
+        else if (!compatible(n->param_types[i], args[i]))
+        {
+            error->flag(scan->this_token(), 84);
+        }
+    }
+}
 
 void parser::parse_statement() // Dispatcher, calls specific parsing grammar checks
 {
@@ -141,7 +177,9 @@ void parser::parse_program() // Grammar check for opening program syntax
     id_tab->enter_name(name.name, lille_type(lille_type::type_prog),lille_kind(lille_kind::unknown), name.line, name.pos);
 
     scan->must_be(symbol::is_sym);
+    block_name_stack.push_back(name.name);
     parse_block();
+    block_name_stack.pop_back();
     scan->must_be(symbol::semicolon_sym);
     if(!scan->have(symbol::end_of_program)) // Nothing after program line
     {
@@ -168,7 +206,15 @@ void parser::parse_block(vector<param_info> params) // Block syntax check
 
     if (scan->have(symbol::identifier))
     {
-        scan->get_token(); 
+        ident_info temp;
+        temp.name = scan->this_token()->get_identifier_value();
+        temp.line = scan->this_token()->get_line_number();
+        temp.pos  = scan->this_token()->get_pos_on_line();
+        if(temp.name != block_name_stack.back())
+        {
+            error->flag(scan->this_token(), 75);
+        }
+        scan->must_be(symbol::identifier);
     }
     id_tab->exit_scope();
 }
@@ -194,7 +240,7 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
     if(scan->have(symbol::procedure_sym))
     {
         scan->must_be(symbol::procedure_sym);
-        ident_info name;                                    // flavor-1 capture, single
+        ident_info name;
         name.name = scan->this_token()->get_identifier_value();
         name.line = scan->this_token()->get_line_number();
         name.pos  = scan->this_token()->get_pos_on_line();
@@ -219,7 +265,11 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
         }
 
         scan->must_be(symbol::is_sym);
+        callable_stack.push_back(lille_type(lille_type::type_proc));    // "in a procedure"
+        block_name_stack.push_back(name.name);
         parse_block(params);
+        block_name_stack.pop_back();
+        callable_stack.pop_back();
         scan->must_be(symbol::semicolon_sym);
     }
     else if(scan->have(symbol::function_sym))
@@ -255,7 +305,11 @@ void parser::parse_declaration() // Grammar check for declarations, three branch
         }
 
         scan->must_be(symbol::is_sym);
+        callable_stack.push_back(ret);
+        block_name_stack.push_back(name.name);
         parse_block(params);
+        block_name_stack.pop_back();
+        callable_stack.pop_back();
         scan->must_be(symbol::semicolon_sym);
     }
     else
@@ -729,6 +783,7 @@ lille_type parser::parse_primary() // Primary syntax in Lille using have and mus
 
 void parser::parse_write() // Write function grammar, allows for optional parentheses which is why bool flag is used.
 {
+    lille_type t;
     scan->must_be(symbol::write_sym);
 
     bool parentheses = scan->have(symbol::left_paren_sym);
@@ -737,10 +792,19 @@ void parser::parse_write() // Write function grammar, allows for optional parent
         scan->must_be(symbol::left_paren_sym);
     }
 
-    parse_expression();
+    t = parse_expression();
+    if (t.get_type() != lille_type::type_unknown and !is_arith(t) and !t.is_type(lille_type::type_string))
+    {
+        error->flag(scan->this_token(), 84);
+    }
     while (scan->have(symbol::comma_sym)) 
     { 
-        scan->must_be(symbol::comma_sym); parse_expression(); 
+        scan->must_be(symbol::comma_sym); 
+        t = parse_expression();
+        if (t.get_type() != lille_type::type_unknown and !is_arith(t) and !t.is_type(lille_type::type_string))
+        {
+            error->flag(scan->this_token(), 84);
+        }
     }
 
     if (parentheses) 
@@ -753,6 +817,7 @@ void parser::parse_write_line() // Same as write but the middle expression is op
 {
     scan->must_be(symbol::writeln_sym);
 
+    lille_type t;
     bool parentheses = scan->have(symbol::left_paren_sym);
     if (parentheses) 
     {
@@ -761,7 +826,11 @@ void parser::parse_write_line() // Same as write but the middle expression is op
 
     if(expression_can_start())
     {
-        parse_expression();
+        t = parse_expression();
+        if (t.get_type() != lille_type::type_unknown and !is_arith(t) and !t.is_type(lille_type::type_string))
+        {
+            error->flag(scan->this_token(), 84);
+        }
         while (scan->have(symbol::comma_sym)) 
         { 
             scan->must_be(symbol::comma_sym); parse_expression(); 
@@ -776,60 +845,174 @@ void parser::parse_write_line() // Same as write but the middle expression is op
 
 void parser::parse_simp_statement() // Simple statement grammar
 {
+    ident_info temp;
+    temp.name = scan->this_token()->get_identifier_value();
+    temp.line = scan->this_token()->get_line_number();
+    temp.pos  = scan->this_token()->get_pos_on_line();
     scan->must_be(symbol::identifier);
 
     if(scan->have(symbol::becomes_sym))
     {
         scan->must_be(symbol::becomes_sym);
-        parse_expression();
+        lille_type t = parse_expression();
+        id_table_node* n = id_tab->find_name(temp.name);
+        if(n == nullptr)
+        {
+            error->flag(scan->this_token(), 81);
+        }
+        else
+        {
+            if(!assignable(n))
+            {
+                error->flag(scan->this_token(), 85);
+            }
+            if(t.get_type() != lille_type::type_unknown and !compatible(n->type, t))
+            {
+                error->flag(scan->this_token(), 84);
+            }
+        }
     }
     else if (scan->have(symbol::left_paren_sym))
     {
         scan->must_be(symbol::left_paren_sym);
-        parse_expression();
+        vector<lille_type> args;
+        vector<bool> bare;
 
+        bool starts_ident = scan->have(symbol::identifier);    
+        args.push_back(parse_expression());
+        bare.push_back(starts_ident);
         while (scan->have(symbol::comma_sym)) 
         { 
-            scan->must_be(symbol::comma_sym); 
-            parse_expression(); 
+            scan->must_be(symbol::comma_sym);
+            starts_ident = scan->have(symbol::identifier);    
+            args.push_back(parse_expression());
+            bare.push_back(starts_ident);
         }
 
         scan->must_be(symbol::right_paren_sym);
+
+        id_table_node* n = id_tab->find_name(temp.name);
+        if(n == nullptr)
+        {
+            error->flag(scan->this_token(), 81);
+        }
+        else if(!n->type.is_type(lille_type::type_proc))
+        {
+            error->flag(scan->this_token(), 90);
+        }
+        else
+        {
+            check_args(n, args, bare);
+        }
     }
 }
 
 void parser::parse_exit() // Exit grammar
 {
     scan->must_be(symbol::exit_sym);
+    if(loop_depth == 0)
+    {
+        error->flag(scan->this_token(), 89);
+    }
     if (scan->have(symbol::when_sym)) 
     { 
-        scan->must_be(symbol::when_sym); 
-        parse_expression(); 
+        scan->must_be(symbol::when_sym);
+        lille_type t = parse_expression();                  // ← the type was being discarded
+        if (t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
+        {
+            error->flag(scan->this_token(), 84);
+        }
     }
 }
 
 void parser::parse_return() // Return grammar
 {
     scan->must_be(symbol::return_sym);
-    if (expression_can_start())
+    bool expr = false;
+    lille_type t, top;
+    if(expression_can_start())
     {
-        parse_expression();
+        t = parse_expression();
+        expr = true;
+    }
+    if (callable_stack.empty())
+    {
+        if(expr)
+        {
+            error->flag(scan->this_token(), 87);
+        }
+    }
+    else
+    {
+        lille_type top = callable_stack.back();
+        if (top.is_type(lille_type::type_proc))
+        {
+            if(expr)
+            {
+                error->flag(scan->this_token(), 87);
+            }                 // procedure: no value allowed
+        }
+        else                                        // function: top IS the return type
+        {
+            if(!expr)
+            {
+                error->flag(scan->this_token(), 87);
+            } 
+            else if (t.get_type() != lille_type::type_unknown and !compatible(top, t))
+                error->flag(scan->this_token(), 87);   
+        }
     }
 }
 
 void parser::parse_read() // Read
 {
+    ident_info temp;
+    id_table_node* n;
     scan->must_be(symbol::read_sym);
     bool parentheses = scan->have(symbol::left_paren_sym);
     if (parentheses) 
     {
         scan->must_be(symbol::left_paren_sym);
     }
+    temp.name = scan->this_token()->get_identifier_value();
     scan->must_be(symbol::identifier);
+    n = id_tab->find_name(temp.name);
+    if(n == nullptr)
+    {
+        error->flag(scan->this_token(), 81);
+    }
+    else
+    {
+        if(!assignable(n))
+        {
+            error->flag(scan->this_token(), 85);
+        }
+        if(!n->type.is_type(lille_type::type_integer) and !n->type.is_type(lille_type::type_real))
+        {
+            error->flag(scan->this_token(), 86);
+        }
+    }
     while (scan->have(symbol::comma_sym)) 
     { 
-        scan->must_be(symbol::comma_sym); 
-        scan->must_be(symbol::identifier); 
+        scan->must_be(symbol::comma_sym);
+        temp.name = scan->this_token()->get_identifier_value();
+        scan->must_be(symbol::identifier);
+        n = id_tab->find_name(temp.name);
+        if(n == nullptr)
+        {
+            error->flag(scan->this_token(), 81);
+        }
+        else
+        {
+            if(!assignable(n))
+            {
+                error->flag(scan->this_token(), 85);
+            }
+            if(!n->type.is_type(lille_type::type_integer) and !n->type.is_type(lille_type::type_real))
+            {
+                error->flag(scan->this_token(), 86);
+            }
+        }
     }
     if (parentheses) 
     {
@@ -840,15 +1023,24 @@ void parser::parse_read() // Read
 void parser::parse_if() // if grammar, in depth the while loop shows elsif repetition
 // Falls back on else
 {
+    lille_type t; 
     scan->must_be(symbol::if_sym);
-    parse_expression();
+    t = parse_expression();
+    if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
+    {
+        error->flag(scan->this_token(), 84);
+    }
     scan->must_be(symbol::then_sym);
     parse_statement_list();
 
     while (scan->have(symbol::elsif_sym))
     {
         scan->must_be(symbol::elsif_sym);
-        parse_expression();
+        t = parse_expression();
+        if(t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
+        {
+            error->flag(scan->this_token(), 84);
+        }
         scan->must_be(symbol::then_sym);
         parse_statement_list();
     }
@@ -865,22 +1057,32 @@ void parser::parse_if() // if grammar, in depth the while loop shows elsif repet
 
 void parser::parse_loop() // Loop grammar, second loop symbol declares end
 {
+    loop_depth++;
     scan->must_be(symbol::loop_sym);
     parse_statement_list();
     scan->must_be(symbol::end_sym);
     scan->must_be(symbol::loop_sym);
+    loop_depth--;
 }
 
 void parser::parse_while() // While grammar
 {
     scan->must_be(symbol::while_sym);
-    parse_expression();
+    lille_type t = parse_expression();
+    if (t.get_type() != lille_type::type_unknown and t.get_type() != lille_type::type_boolean)
+    {
+        error->flag(scan->this_token(), 84);
+    }
     parse_loop();
 }
 
 void parser::parse_for() // For grammar, includes range and loop functionality
 {
+    ident_info temp;
     scan->must_be(symbol::for_sym);
+    temp.name = scan->this_token()->get_identifier_value();
+    temp.line = scan->this_token()->get_line_number();
+    temp.pos = scan->this_token()->get_pos_on_line();
     scan->must_be(symbol::identifier);
     scan->must_be(symbol::in_sym);
 
@@ -890,5 +1092,9 @@ void parser::parse_for() // For grammar, includes range and loop functionality
     }
 
     parse_range();
+
+    id_tab->enter_scope();
+    id_tab->enter_name(temp.name, lille_type::type_integer, lille_kind::for_ident, temp.line, temp.pos);
     parse_loop();
+    id_tab->exit_scope();
 }

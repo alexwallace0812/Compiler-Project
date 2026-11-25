@@ -36,6 +36,9 @@ class parser {
     scanner* scan;
     id_table* id_tab;
     error_handler* error;
+    int loop_depth {0};
+    vector<lille_type> callable_stack;
+    vector<string> block_name_stack; 
 
     // Main parser grammar function declarations
 
@@ -73,6 +76,9 @@ class parser {
     bool statement_can_start();
     bool is_arith(lille_type t);
     bool is_ordered(lille_type t);
+    bool assignable(id_table_node* n);
+    bool compatible(lille_type target, lille_type expr);
+    void check_args(id_table_node* n, vector<lille_type> args, vector<bool> bare);
 
     public:
     parser(scanner* s, id_table* id_t, error_handler* e); // Constructor
