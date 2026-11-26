@@ -118,6 +118,9 @@ void parser::check_args(id_table_node* n, vector<lille_type> args, vector<bool> 
 void parser::parse_statement() // Dispatcher, calls specific parsing grammar checks
 {
     // FIRST set
+    // have() = checks the current without consuming
+    // must_be() = consumes the required token or reports it missing
+    // the parser talks to the scanner only through these if statements
 
     if (scan->have(symbol::write_sym))
     {
@@ -223,10 +226,13 @@ void parser::parse_statement_list() // Grammar check statement list
 {
     // <statement_list> ::= <statement> ; { <statement> ; }*
 
+
     parse_statement();
     scan->must_be(symbol::semicolon_sym);
 
     while(statement_can_start()) // FOLLOW
+    // the repeated unit is "<statement> ;" — the semicolon belongs to the
+    // list and not the statement so it's required
     {
         parse_statement();
         scan->must_be(symbol::semicolon_sym);
@@ -496,6 +502,9 @@ lille_type parser::parse_expression() // expression grammar
 {
     lille_type l = parse_simp_expression(), r;
 
+    // relop yields a boolean, doesn't matter the operand types
+    // and comparisons never produce their operand's type
+
     if(relation_op_follows())
     {
         scan->get_token();
@@ -715,6 +724,10 @@ lille_type parser::parse_primary() // Primary syntax in Lille using have and mus
         return t;
     }
     else if (scan->have(symbol::identifier))
+    // give this expression a type I must know what the
+    // name is so undeclared → error 81 
+    // on any error return type_unknown
+    // one thing to note is a subexpression that already reported an error returns UNKNOWN,
     {
         ident_info id;
         
@@ -856,6 +869,9 @@ void parser::parse_write_line() // Same as write but the middle expression is op
 
 void parser::parse_simp_statement() // Simple statement grammar
 {
+    // two ideas asked here... is the ident assignable with kind and constants,
+    // for-variables and value parameters aren't so throw error 85 
+    //  is the value compatible where int can widen into real if not throw 84 error
     ident_info temp;
     temp.name = scan->this_token()->get_identifier_value();
     temp.line = scan->this_token()->get_line_number();
