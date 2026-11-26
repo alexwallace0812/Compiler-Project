@@ -115,18 +115,18 @@ void id_table::inorder_print(id_table_node* node)
 {
 	    if (node == nullptr) return;
     inorder_print(node->left);
-	cout << setw(15) << left << node->name
-     << setw(12) << node->kind.to_string()
-     << setw(10) << node->type.to_string()
-     << " level " << node->lev
-     << " (" << node->line_number << "," << node->pos_in_line << ")";
+	cout << "Token Name: " << setw(15) << left << node->name
+     << " Kind: "<< setw(12) << node->kind.to_string()
+     << " Type: " << setw(10) << node->type.to_string()
+     << " Level: " << node->lev
+     << " Line Number: " << node->line_number << ", Position: " << node->pos_in_line;
 
 if (node->kind.is_kind(lille_kind::constant))          // value, if it's a constant
 {
-    if      (node->type.is_type(lille_type::type_integer)) cout << "  value: " << node->int_value;
-    else if (node->type.is_type(lille_type::type_real))    cout << "  value: " << node->real_value;
-    else if (node->type.is_type(lille_type::type_string))  cout << "  value: " << node->string_value;
-    else if (node->type.is_type(lille_type::type_boolean)) cout << "  value: " << node->bool_value;
+    if      (node->type.is_type(lille_type::type_integer)) cout << "  Value: " << node->int_value;
+    else if (node->type.is_type(lille_type::type_real))    cout << "  Value: " << node->real_value;
+    else if (node->type.is_type(lille_type::type_string))  cout << "  Value: " << node->string_value;
+    else if (node->type.is_type(lille_type::type_boolean)) cout << "  Value: " << node->bool_value;
 }
 
 if (node->type.is_type(lille_type::type_proc) or node->type.is_type(lille_type::type_func))
